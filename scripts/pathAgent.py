@@ -3,8 +3,9 @@ import queue
 import collections
 import random
 import pickle
+from agent import Agent
 
-class PathAgent:
+class PathAgent(Agent):
 	def __init__(self):
 		pass
 
@@ -28,14 +29,9 @@ class PathAgent:
 
 		list_of_destinations = self.destinations_not_complete(game.players[pnum].hand_destination_cards, game.player_graph(pnum))
 
-		free_connections_graph = self.free_routes_graph(game.board.graph, game.number_of_players)
 		player_edges = game.player_graph(pnum).edges()
-		
-		joint_graph = free_connections_graph
-		for edge in player_edges:
-			joint_graph.add_edge(edge[0], edge[1], weight=0, color='none')
-		
-		#print joint_graph.edges()
+		joint_graph = self.joint_graph(game, pnum)
+		#print(joint_graph.edges())
 		
 		paths_to_take = []
 
@@ -93,7 +89,7 @@ class PathAgent:
 								paths_to_take.append(((-1) * (game.point_table[weight] + 2 * destination['points'][destination['city2'].index(temp[i+1])]), temp[i], temp[i+1]))
 
 
-		free_connections_graph = self.free_routes_graph(game.board.graph, game.number_of_players)
+		free_connections_graph = self.free_routes_graph(pnum, game.board.graph, game.number_of_players)
 
 		if len(paths_to_take) == 0:
 			for node1 in free_connections_graph:
@@ -160,7 +156,7 @@ class PathAgent:
 						return_move = m
 						break
 				
-				#print "return_move: " + return_move.function + " : " + str(return_move.args)
+				#print ("return_move: " + return_move.function + " : " + str(return_move.args))
 				#print max_color
 				#print return_move.function
 				#print return_move.args
@@ -274,25 +270,3 @@ class PathAgent:
 
 		return result
 
-	def free_routes_graph(self, graph, number_of_players):
-		G = nx.MultiGraph()
-
-		visited_nodes = []
-		
-		for node1 in graph:
-			for node2 in graph[node1]:
-				if node2 not in visited_nodes:
-					locked = False
-					for edge in graph[node1][node2]:
-						if number_of_players < 4:
-							if graph[node1][node2][edge]['owner'] != -1:
-								locked = True
-
-					if not locked:
-						for edge in graph[node1][node2]:
-							if graph[node1][node2][edge]['owner'] == -1:
-								G.add_edge(node1, node2, weight=graph[node1][node2][edge]['weight'], color=graph[node1][node2][edge]['color'])
-
-			visited_nodes.append(node1)
-		
-		return G

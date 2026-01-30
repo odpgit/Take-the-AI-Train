@@ -318,7 +318,6 @@ class Board:
 			for c in connections:
 				if (connections[c]['color'] == color or connections[c]['color'] == "GRAY") and connections[c]['owner'] == -1:
 					return connections[c]
-
 		return None
 
 #class that encapsulate the game itself

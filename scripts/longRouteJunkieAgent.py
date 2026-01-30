@@ -1,8 +1,9 @@
 import networkx as nx
 import operator
 import random
+from agent import Agent
 
-class LongRouteJunkieAgent:
+class LongRouteJunkieAgent(Agent):
 	def __init__(self):
 		self.current_objective_route = None
 		self.current_objective_color = None
@@ -192,38 +193,6 @@ class LongRouteJunkieAgent:
 
 		return result
 
-	def free_routes_graph(self, graph, number_of_players, min_weight_edge=0):
-		G = nx.MultiGraph()
-
-		visited_nodes = []
-		
-		for node1 in graph:
-			for node2 in graph[node1]:
-				if node2 not in visited_nodes:
-					locked = False
-					for edge in graph[node1][node2]:
-						if number_of_players < 4:
-							if graph[node1][node2][edge]['owner'] != -1:
-								locked = True
-
-					if not locked:
-						for edge in graph[node1][node2]:
-							if graph[node1][node2][edge]['owner'] == -1 and graph[node1][node2][edge]['weight'] >= min_weight_edge:
-								G.add_edge(node1, node2, weight=graph[node1][node2][edge]['weight'], color=graph[node1][node2][edge]['color'], owner=-1)
-
-			visited_nodes.append(node1)
-		
-		return G
-
-	def joint_graph(self, game, pnum, min_weight_edge=0):
-		free_connections_graph = self.free_routes_graph(game.board.graph, game.number_of_players, min_weight_edge)
-		player_edges = game.player_graph(pnum).edges()
-		
-		joint_graph = free_connections_graph
-		for edge in player_edges:
-			joint_graph.add_edge(edge[0], edge[1], weight=0, color='none', owner=pnum)
-
-		return joint_graph
 
 	def chooseNextRouteTarget(self, game, pnum, graph, city1, city2):
 		try:
@@ -285,7 +254,7 @@ class LongRouteJunkieAgent:
 		max_size = 0
 		list_of_edges = []
 	
-		free_routes_graph = self.free_routes_graph(game.board.graph, game.number_of_players)
+		free_routes_graph = self.free_routes_graph(pnum, game.board.graph, game.number_of_players)
 		for city1 in free_routes_graph:
 			for city2 in free_routes_graph[city1]:
 				for e in free_routes_graph[city1][city2]:
