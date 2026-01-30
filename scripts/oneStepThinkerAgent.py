@@ -69,7 +69,7 @@ class OneStepThinkerAgent:
 						draw_top_move = move			
 			else:
 				max_color = {x:game.players[pnum].hand[x] for x in game.players[pnum].hand if x != 'destination' and x != 'wild'}
-				max_color = max(max_color.iteritems(), key=operator.itemgetter(1))
+				max_color = max(max_color.items(), key=operator.itemgetter(1))
 
 				for move in draw_train_card_moves:
 					if move.args == max_color:
@@ -159,7 +159,7 @@ class OneStepThinkerAgent:
 		list_of_destinations = self.destinations_not_completed(game, pnum, joint_graph)
 		if list_of_destinations:
 			#most_valuable_route = max(list_of_destinations, key='points')[0]
-			most_valuable_route_index = max(xrange(len(list_of_destinations)), key=lambda index: list_of_destinations[index]['points'])
+			most_valuable_route_index = max(range(len(list_of_destinations)), key=lambda index: list_of_destinations[index]['points'])
 			most_valuable_route = list_of_destinations[most_valuable_route_index]
 			result = self.chooseNextRouteTarget(game, pnum, joint_graph, most_valuable_route['city1'], most_valuable_route['city2'])
 			if result != False:

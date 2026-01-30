@@ -165,9 +165,9 @@ class HungryAgent():
 				moves_by_color[move.args.upper()] = move
 
 		colors_available = game.train_cards_face_up.copy()
-		max_color_available = max(colors_available.iteritems(), key= operator.itemgetter(1))
+		max_color_available = max(colors_available.items(), key= operator.itemgetter(1))
 		if self.colors_needed != None:
-			most_needed_color = max(self.colors_needed.iteritems(), key= operator.itemgetter(1))[0]
+			most_needed_color = max(self.colors_needed.items(), key= operator.itemgetter(1))[0]
 		else:
 			most_needed_color = 'NONE'
 
@@ -361,7 +361,7 @@ class HungryAgent():
 				color_routes[temp[0]].append([temp[3], temp[4]])
 				total_points_from_routes += point_dict[weight]
 
-		return [total_points_from_routes, sum(colors_needed.itervalues()), color_routes, colors_needed]
+		return [total_points_from_routes, sum(colors_needed.values()), color_routes, colors_needed]
 
 	def free_routes_graph(self, graph, number_of_players):
 		G = nx.MultiGraph()

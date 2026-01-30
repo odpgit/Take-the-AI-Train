@@ -1,5 +1,5 @@
 import networkx as nx
-import Queue
+import queue
 import collections
 import random
 import pickle
@@ -24,7 +24,7 @@ class PathAgent:
 					#print 'd'
 					return m
 	
-		p_queue = Queue.PriorityQueue()
+		p_queue = queue.PriorityQueue()
 
 		list_of_destinations = self.destinations_not_complete(game.players[pnum].hand_destination_cards, game.player_graph(pnum))
 

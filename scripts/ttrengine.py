@@ -1,31 +1,13 @@
-import multiprocessing as mp
-import collections
 import random
 import bisect
 import networkx as nx
 import itertools
 import random
-import copy
-import Queue
 import pickle
 import time
-import copy_reg
+import copyreg
 import types
-import operator
-import re
 
-import collections
-import random
-import bisect
-import networkx as nx
-import itertools
-import random
-import copy
-import Queue
-import pickle
-import time
-import copy_reg
-import types
 
 def _pickle_method(m):
 	if m.im_self is None:
@@ -33,7 +15,7 @@ def _pickle_method(m):
 	else:
 		return getattr, (m.im_self, m.im_func.func_name)
 
-copy_reg.pickle(types.MethodType, _pickle_method)
+copyreg.pickle(types.MethodType, _pickle_method)
 
 class LogMove:
 	def __init__(self, pnum, move, args):
@@ -147,7 +129,7 @@ def make_train_deck(number_of_color_cards, number_of_wildcards):
 	return cards
 
 def randomCard(cards):
-	keys = cards.keys()
+	keys = list(cards.keys())
 	total = 0
 	temp = []
 	
@@ -255,7 +237,7 @@ class CardManager:
 
 	#returns a randomly picked card from the list (deck)
 	def draw_card(self):
-		if (sum(self.deck.itervalues()) == 0):
+		if (sum(self.deck.values()) == 0):
 			self.reshuffle()
 		card = randomCard(self.deck)
 		self.deck[card] -= 1
@@ -478,7 +460,7 @@ class Game:
 	def draw_card(self, deck):
 		card = deck.draw_card()
 
-		if deck == self.train_deck and sum(self.train_deck.deck.itervalues()) == 0:
+		if deck == self.train_deck and sum(self.train_deck.deck.values()) == 0:
 			self.train_deck.reshuffle()
 
 		return card
@@ -504,13 +486,13 @@ class Game:
 			else:
 				self.train_cards_face_up[card] = 1			
 
-			if sum(self.train_cards_face_up.itervalues()) == self.number_of_face_up_train_cards:
+			if sum(self.train_cards_face_up.values()) == self.number_of_face_up_train_cards:
 				#card_count = collections.Counter(self.train_cards_face_up)
 				card_count = self.train_cards_face_up
 
 				if 'wild' in card_count:
 					if card_count['wild'] >= self.limit_of_face_up_wild_cards + 1:
-						x = sum(self.train_deck.deck.itervalues()) + sum(self.train_deck.discard_pile.itervalues())
+						x = sum(self.train_deck.deck.values()) + sum(self.train_deck.discard_pile.values())
 						if x > self.number_of_face_up_train_cards:
 							self.train_deck.discard(self.train_cards_face_up)
 							self.train_cards_face_up = emptyCardDict()
@@ -582,7 +564,7 @@ class Game:
 	#returns the list of cards he needs to use to claim the route
 	#if the player doesn't have enough of the color, it will try to complete the requirements with wild cards
 	def checkPlayerHandRequirements(self, player_index, number_of_cards, color, ferries, special_nordic_route=False):
-		if sum([x for x in self.players[player_index].hand.itervalues() if isinstance(x, int)]) < number_of_cards:
+		if sum([x for x in self.players[player_index].hand.values() if isinstance(x, int)]) < number_of_cards:
 			return False
 
 		color = color.lower()
@@ -599,7 +581,7 @@ class Game:
 				color = 'wild'
 	
 		if special_nordic_route:
-			total_cards_left = sum([x for x in self.players[player_index].hand.itervalues() if isinstance(x, int)])
+			total_cards_left = sum([x for x in self.players[player_index].hand.values() if isinstance(x, int)])
 			total_cards_left = total_cards_left - total
 			total = total + (total_cards_left/4)
 
@@ -685,14 +667,14 @@ class Game:
 			
 				if edge['underground']:
 					extra_weight = 0
-					y = self.number_of_cards_drawn_on_underground if (sum(self.train_deck.deck.itervalues()) + sum(self.train_deck.discard_pile.itervalues()))  >= self.number_of_cards_drawn_on_underground else (sum(self.train_deck.deck.itervalues()) +  sum(self.train_deck.discard_pile.itervalues()))
+					y = self.number_of_cards_drawn_on_underground if (sum(self.train_deck.deck.values()) + sum(self.train_deck.discard_pile.values()))  >= self.number_of_cards_drawn_on_underground else (sum(self.train_deck.deck.values()) +  sum(self.train_deck.discard_pile.values()))
 					for i in range(0, y):
 						card = self.draw_card(self.train_deck)
 						if card.lower() == route_color.lower() or card.lower() == "wild":
 							extra_weight = extra_weight + 1
 						self.train_deck.discard(card)
 					
-					if sum(self.train_deck.deck.itervalues()) == 0:
+					if sum(self.train_deck.deck.values()) == 0:
 						self.train_deck.reshuffle()
 				
 					if extra_weight > 0:
@@ -748,10 +730,10 @@ class Game:
 	#draws 3 new destination cards of which the player is required to keep at least 1 (rulebook)
 	#the player that does this move needs to call the choose destination cards moves right after.
 	def drawDestinationCards(self):
-		if sum(self.destination_deck.deck.itervalues()) == 0:
+		if sum(self.destination_deck.deck.values()) == 0:
 			return False
 
-		x = self.destination_deck_draw_rules[2] if sum(self.destination_deck.deck.itervalues()) >= self.destination_deck_draw_rules[2] else sum(self.destination_deck.deck.itervalues())
+		x = self.destination_deck_draw_rules[2] if sum(self.destination_deck.deck.values()) >= self.destination_deck_draw_rules[2] else sum(self.destination_deck.deck.values())
 		if 'destination' not in self.players[self.current_player].hand:
 			self.players[self.current_player].hand['destination'] = []
 		for i in range(0, x):
@@ -770,7 +752,7 @@ class Game:
 	#card => string of the card to draw. If value is 'top', draws a card from the top of the deck
 	#to draw from the face up cards, just pass the string of the color of the card to draw as the parameter
 	def drawTrainCard(self, card):
-		if sum(self.train_deck.deck.itervalues()) == 0:
+		if sum(self.train_deck.deck.values()) == 0:
 			self.train_deck.reshuffle()
 		if (not self.switzerland_variant) and (not self.nordic_countries_variant) and self.number_of_current_draws + 1 < self.number_of_cards_draw_per_turn and card == 'wild' and card in self.train_cards_face_up and self.train_cards_face_up[card] > 0 and self.players[self.current_player].drawing_train_cards == False:
 			self.players[self.current_player].hand['wild'] += 1
@@ -803,12 +785,12 @@ class Game:
 			drawn = True
 		
 		if drawn:
-			if card == 'top' and sum(self.train_deck.deck.itervalues()) == 0:
+			if card == 'top' and sum(self.train_deck.deck.values()) == 0:
 				self.number_of_current_draws = 0
 				self.next_players_turn()
 				return True
 
-			elif sum(self.train_deck.deck.itervalues()) == 0 and sum(self.train_cards_face_up.itervalues()) == 0:
+			elif sum(self.train_deck.deck.values()) == 0 and sum(self.train_cards_face_up.values()) == 0:
 				self.number_of_current_draws = 0
 				self.next_players_turn()
 				return True
@@ -989,7 +971,7 @@ class Game:
 					temp = max(temparr)
 				
 				if longest_route_value == None or temp >= longest_route_value:
-					if temp > longest_route_value:
+					if longest_route_value is None or temp > longest_route_value:
 						longest_route_player = [self.players.index(player)]
 					else:
 						longest_route_player.append(self.players.index(player))
@@ -1077,7 +1059,7 @@ class Game:
 				for cardset in comb:
 					pmoves.append(Move('chooseDestinationCards', [player_index, list(cardset)]))
 					#pmoves.append(Move(self.move_choose_destination_cards, [player_index, list(cardset)]))
-		elif self.players[player_index].drawing_train_cards == True and sum(self.train_deck.deck.itervalues()) > 0:
+		elif self.players[player_index].drawing_train_cards == True and sum(self.train_deck.deck.values()) > 0:
 			pmoves.append(Move('drawTrainCard', 'top'))
 			for card in set(self.train_cards_face_up):
 				if (self.switzerland_variant or self.nordic_countries_variant) and self.train_cards_face_up[card] > 0:
@@ -1110,13 +1092,13 @@ class Game:
 								if self.players[player_index].number_of_trains >= edge['weight'] + edge['mountain']:
 									pmoves.append(Move('claimRoute', [city1, city2, color]))
 								#pmoves.append(Move(self.move_claimRoute, [city1, city2, color]))
-			if sum(self.destination_deck.deck.itervalues()) > 0:
+			if sum(self.destination_deck.deck.values()) > 0:
 				pmoves.append(Move('drawDestinationCards',[]))
 				#pmoves.append(Move(self.move_drawDestinationCards,[]))
-			if sum(self.train_deck.deck.itervalues()) > 0:
+			if sum(self.train_deck.deck.values()) > 0:
 				pmoves.append(Move('drawTrainCard', 'top'))
 				#pmoves.append(Move(self.move_drawTrainCard, 'top'))
-			if sum(self.train_cards_face_up.itervalues()) > 0:
+			if sum(self.train_cards_face_up.values()) > 0:
 				for card in set(self.train_cards_face_up):
 					if self.train_cards_face_up[card] > 0:
 						pmoves.append(Move('drawTrainCard', card))
