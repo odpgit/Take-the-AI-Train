@@ -49,6 +49,9 @@ class GameHandler:
 	def play(self, runnum, save=False):
 		movelog = []
 		start = time.time()
+		
+		self.game.setup()
+		
 		for i in range(0, self.game.number_of_players):
 			#print(i)
 			move = self.agents[i].decide(self.game.copy(), i)
@@ -446,7 +449,7 @@ class Game:
 				self.players[i].hand["destination"].append(self.draw_card(self.destination_deck))
 
 			self.players[i].choosing_destination_cards = True
-
+		
 		self.current_player = random.choice([x for x in range(0, self.number_of_players)])
 		self.who_went_first = self.current_player
 		self.players_choosing_destination_cards = True
@@ -476,7 +479,6 @@ class Game:
 	def addFaceUpTrainCard(self):
 		#print self.train_deck.deck
 		#print self.train_deck.discard_pile
-		
 		if len(self.train_deck.deck) > 0:
 			card = self.draw_card(self.train_deck)
 
@@ -1109,7 +1111,7 @@ class Game:
 	
 		player = self.players[pnum]
 		player_graph = self.player_graph(pnum)
-	
+		
 		for destination in player.hand_destination_cards:
 			try:
 				if destination.type != '':
@@ -1210,3 +1212,14 @@ class Game:
 		winners = [i for i in range(0, len(self.players)) if self.players[i].points == max_points]
 		
 		return winners
+	
+	def print_scoresheet(self):
+		points_list = sorted(list(set([x.points for x in self.players])), reverse=True) #no duplicates
+		place = 1
+		for pts in points_list:
+			prints = 0
+			for i in range(len(self.players)):
+				if self.players[i].points == pts:
+					print(f"({place}): Player {i}, scoring {pts} points")
+					prints += 1
+			place += prints

@@ -57,3 +57,6 @@ for i in range(0, len(player_list)):
 
 print("WINNER : ", gh.game.winner())
 print("Unclaimed Routes: ", gh.game.getUnclaimedRoutes())
+
+print("Scoring Breakdown")
+gh.game.print_scoresheet()

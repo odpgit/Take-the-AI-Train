@@ -177,29 +177,6 @@ class OneStepThinkerAgent(Agent):
 		
 		return result
 
-	def destinations_not_completed(self, game, pnum, joint_graph):
-		result = []
-		graph = game.player_graph(pnum)
-
-		destination_cards = game.players[pnum].hand_destination_cards
-		for card in destination_cards:
-			city1 = card.destinations[0]
-			city2 = card.destinations[1]
-			try:
-				nx.shortest_path(graph, city1, city2)
-				solved = True
-			except:
-				solved = False
-
-			if not solved:
-				if city1 in joint_graph.nodes() and city2 in joint_graph.nodes() and nx.has_path(joint_graph, city1, city2):
-					try:
-						result.append({'city1': city1, 'city2': city2, 'points': card.points, 'type': card.type})
-					except:
-						result.append({'city1': city1, 'city2': city2, 'points': card.points})
-
-		return result
-
 	def chooseNextRouteTarget(self, game, pnum, graph, city1, city2):
 		try:
 			list_of_route_nodes = nx.shortest_path(graph, city1, city2)

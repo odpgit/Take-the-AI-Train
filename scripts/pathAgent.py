@@ -27,7 +27,7 @@ class PathAgent(Agent):
 	
 		p_queue = queue.PriorityQueue()
 
-		list_of_destinations = self.destinations_not_complete(game.players[pnum].hand_destination_cards, game.player_graph(pnum))
+		list_of_destinations = self.destinations_not_completed(game, pnum, game.player_graph(pnum))
 
 		player_edges = game.player_graph(pnum).edges()
 		joint_graph = self.joint_graph(game, pnum)
@@ -221,52 +221,3 @@ class PathAgent(Agent):
 		#print game.board.get_free_connection(paths_to_take[0][0], paths_to_take[0][1], 'YELLOW')
 		#print game.board.get_free_connection(paths_to_take[0][0], paths_to_take[0][1], 'PINK')
 		#print game.board.get_free_connection(paths_to_take[0][0], paths_to_take[0][1], 'WHITE')
-		
-	def destinations_not_complete(self, destination_cards, graph, switzerland=False):
-		result = []
-		
-		country_reference = {"FRANCE": ['FRANCEA', 'FRANCEB', 'FRANCEC', 'FRANCED'], "ITALIA": ['ITALIAA', 'ITALIAB', 'ITALIAC', 'ITALIAD', 'ITALIAE'], "OSTERREICH": ['OSTERREICHA', 'OSTERREICHB','OSTERREICHC'], "DEUTSCHLAND": ['DEUTSCHLANDA', 'DEUTSCHLANDB', 'DEUTSCHLANDC', 'DEUTSCHLANDD', 'DEUTSCHLANDE']}
-
-		for card in destination_cards:
-			city1, city2 = card.destinations
-			solved = False
-			try:
-				if card.type == "city":
-					if city1 in graph.nodes():
-						for country in city2:
-							for d in country_reference[country]:
-								if d in graph.nodes():
-									if nx.has_path(graph, city1, d):
-										solved = True
-										break
-						if solved:
-							break
-
-				elif card.type == "country":
-					for d1 in country_reference[city1]:
-						if d1 in graph.nodes():
-							for country2 in city2:
-								for d2 in country_reference[country2]:
-									if d2 in graph.nodes():
-										if nx.has_path(graph, d1, d2):
-											solved = True
-											break
-							if solved:
-								break
-					if solved:
-						break
-			except:
-				try:
-					nx.shortest_path(graph, city1, city2)
-					solved = True
-				except:
-					solved = False
-
-			if not solved:
-				try:
-					result.append({'city1': city1, 'city2': city2, 'points': card.points, 'type': card.type})
-				except:
-					result.append({'city1': city1, 'city2': city2, 'points': card.points})
-
-		return result
-
