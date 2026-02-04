@@ -29,8 +29,8 @@ import networkx as nx
 #   (2) Number of trains behind player with longest route
 #   (3) Minimum number of possible paths to complete a destination card
 #   (4) Sum of points remaining to complete all destination cards in hand
-#   (5) Number of train car cards needed to complete any of the destination cards in hand
-#   (6) Number of face-up train car cards that let you complete a route needed for a destination card 
+#   (5) TRACTABLE? Number of train car cards needed to complete any of the destination cards in hand
+#   (6) TRACTABLE? Number of face-up train car cards that let you complete a route needed for a destination card 
 #   (7) Turn number
 
 #   General strategies of each agent
@@ -55,21 +55,15 @@ import networkx as nx
 #         
 class ApproximateQLearningAgent(Agent):
     def __init__(self, numPlayers):
-        longest_route_by_player = [0] * numPlayers
-        remaining_destinations = []
-        turn_number = 0
+        self.longest_route_by_player = [0] * numPlayers
+        self.remaining_destinations = []
+        self.turn_number = 0
     
     def decide(self, game, pnum):
         #update longest route by player somehow
 
-
-
-        #update remaining destinations
-        # if drawDestinationCard: add to it
-        # if claimRoute: check to see if any destination card in remaining_destinations is now complete
-
         #update turn number
-        turn_number += 1
+        self.turn_number += 1
 
     def feature_num_players(self, game, pnum):
         return game.number_of_players()
@@ -91,9 +85,29 @@ class ApproximateQLearningAgent(Agent):
         rem_dest = self.destinations_not_completed(game, pnum, jgraph)
         if len(rem_dest) == 0:
             return 0 #zero out in vector multiplication
-        min_poss_paths = 0
+        
+        min_poss_paths = float('inf')
         for dcard in rem_dest:
-            pass
             #get possible paths to dcard
-            #paths_generator = nx.all_simple_paths(jgraph, )
+            paths_generator = nx.all_simple_paths(jgraph, dcard.city1, dcard.city2)
+            min_poss_paths = min(min_poss_paths, len(paths_generator))
+        
+        return min_poss_paths + 1 #to avoid zeroing out in vector multiplication
     
+    def feature_dcard_points_remaining(self, game, pnum):
+        jgraph = self.joint_graph(game, pnum)
+        rem_dest = self.destinations_not_completed(game, pnum, jgraph)
+        res = 0
+        for dcard in rem_dest:
+            res += dcard.points
+        
+        return res
+    
+    def feature_num_traincar_cards_for_dcards_remaining(self, game, pnum):
+        pass
+
+    def feature_faceup_cards_for_dcards_remaining(self, game, pnum):
+        pass
+
+    def feature_turn_number(self, game, pnum):
+        return self.turn_number
