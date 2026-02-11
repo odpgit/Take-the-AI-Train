@@ -1,5 +1,6 @@
 from agent import Agent
 import networkx as nx
+from ttrengine import emptyCardDict
 
 #Question: how to handle storing feature weights?
 #   Options: include training function that must be run every time before actually running agent for gameplay
@@ -64,6 +65,8 @@ class ApproximateQLearningAgent(Agent):
         self.jgraph = None
         self.remaining_dest = []
         self.paths_planned = {}
+        self.cards_needed = emptyCardDict()
+        self.num_cards_needed = 0
         self.turn_number = 0
 
     def weight_function(zero_edges):
@@ -83,10 +86,38 @@ class ApproximateQLearningAgent(Agent):
 
         #update paths planned with shortest available path to each remaining dcard
         claimed_edges = set(game.player_graph(pnum).edges())
-        for d in self.remaining_dest:
-            self.paths_planned[d] = nx.shortest_path(self.jgraph, d['city1'], d['city2'], weight=self.weight_function(claimed_edges))
 
-        #update longest route by player somehow
+        #figure out what color cards are needed to complete each of these paths
+        #note: the two below variables are different since routes with multiple colors to claim show up 2x in self.cards_needed
+        self.cards_needed = emptyCardDict()
+        self.num_cards_needed = 0
+        for d in self.remaining_dest:
+            #this shortest path will include this player's already-claimed routes!
+            self.paths_planned[d] = nx.shortest_path(self.jgraph, d['city1'], d['city2'], weight=self.weight_function(claimed_edges))
+            for i in range(0, len(self.paths_planned[d]) - 1):
+                node1 = self.paths_planned[d][i]
+                node2 = self.paths_planned[d][i+1]
+                #first, check if route already claimed by this player
+                if node1 in game.player_graph(pnum)[node2] or node2 in game.player_graph(pnum)[node1]:
+                    #already claimed - don't need any more cards
+                    continue
+
+                #otherwise, find pairing on game board
+                edgelist = game.board.get_free_connection(node1, node2)
+
+                self.num_cards_needed += edgelist[0]['weight']
+
+                #decision: if route has multiple ways to claim it, add to both
+                for e in edgelist:
+                    #note: graph has colors uppercase but cards_needed has colors lowercase
+                    #note: if e['color'] is gray, will just add gray to self_cards_needed. That's OK.
+                    self.cards_needed[e['color'].lower()] += e['weight']
+
+        #update longest route by player
+        for pnum in range(len(self.longest_route_by_player)):
+            player_graph = game.player_graph(pnum)
+            longest_by_node = [self.findMaxWeightSumForNode(player_graph, v, []) for v in player_graph.nodes()]
+            self.longest_route_by_player[pnum] = max(longest_by_node) if len(longest_by_node) > 0 else 0
 
         #consult features to make decision (AFTER above updates)
 
@@ -124,13 +155,17 @@ class ApproximateQLearningAgent(Agent):
         return res
     
     def feature_num_traincar_cards_for_dcards_remaining(self, game, pnum):
-        pass 
+        return self.num_cards_needed
 
     def feature_faceup_cards_for_dcards_remaining(self, game, pnum):
-        #game.train_cards_face_up
         count = 0
-        for path in self.paths_planned:
-            pass
+        cards_face_up = {k: v for k, v in game.train_cards_face_up().items() if v != 0}
+        
+        for c in cards_face_up:
+            if self.cards_needed[c] > 0:
+                count += min(self.cards_needed[c], cards_face_up[c])
+        
+        return count
 
     def feature_turn_number(self, game, pnum):
         return self.turn_number

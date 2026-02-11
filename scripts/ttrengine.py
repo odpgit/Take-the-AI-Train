@@ -307,9 +307,9 @@ class Board:
 	#returns a route (edge) with a specific color that has not been claimed
 	#if number_of players <= 3, only 1 route can be claimed between the same two cities
 	#city1 and city2 => string of the two cities that make up the route
-	#color => the color of the route
+	#color => the color of the route. If color is None, returns list of all possible unclaimed routes
 	#number_of_players => the number of players in the current game
-	def get_free_connection(self, city1, city2, color, number_of_players=2, special_variant=False):
+	def get_free_connection(self, city1, city2, color=None, number_of_players=2, special_variant=False):
 		connections = self.get_connection(city1, city2)
 		locked = False
 		if number_of_players < 4 or (number_of_players == 3 and special_variant):
@@ -318,6 +318,8 @@ class Board:
 					locked = True
 
 		if not locked:
+			if color is None:
+				return [c['owner'] == -1 for c in connections]
 			for c in connections:
 				if (connections[c]['color'] == color or connections[c]['color'] == "GRAY") and connections[c]['owner'] == -1:
 					return connections[c]
@@ -970,7 +972,7 @@ class Game:
 				temp = 0
 				if len(temparr) > 0:
 					temp = max(temparr)
-				
+				#print(f"Player {self.players.index(player)} has longest route score of {temp}")
 				if longest_route_value == None or temp >= longest_route_value:
 					if longest_route_value is None or temp > longest_route_value:
 						longest_route_player = [self.players.index(player)]
@@ -1001,6 +1003,7 @@ class Game:
 
 		if self.longest_route_variant:
 			for player in longest_route_player:
+				#print(f"Player {player} earned {self.amount_of_points_longest_route} for longest route!")
 				self.players[player].points = self.players[player].points + self.amount_of_points_longest_route
 
 		if self.asia_variant:
