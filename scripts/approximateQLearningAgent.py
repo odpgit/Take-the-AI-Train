@@ -1,6 +1,10 @@
 from agent import Agent
 import networkx as nx
 from ttrengine import emptyCardDict
+from hungryAgent import HungryAgent
+from longRouteJunkieAgent import LongRouteJunkieAgent
+from oneStepThinkerAgent import OneStepThinkerAgent
+from pathAgent import PathAgent
 
 #Question: how to handle storing feature weights?
 #   Options: include training function that must be run every time before actually running agent for gameplay
@@ -61,6 +65,13 @@ from ttrengine import emptyCardDict
 #         
 class ApproximateQLearningAgent(Agent):
     def __init__(self, numPlayers):
+        self.features = [getattr(self, name) for name in self.__class__.__dict__ 
+                         if name.startswith("feature_") and callable(getattr(self, name))]
+        self.weights = [0] * len(self.features)
+        #List of agents to pick actions from.
+        #Each agent will have decide() called on it with this agent's pnum, which should keep their fields updated
+        self.agents = [HungryAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent(), PathAgent()]
+        
         self.longest_route_by_player = [0] * numPlayers
         self.jgraph = None
         self.remaining_dest = []
@@ -119,8 +130,26 @@ class ApproximateQLearningAgent(Agent):
             longest_by_node = [self.findMaxWeightSumForNode(player_graph, v, []) for v in player_graph.nodes()]
             self.longest_route_by_player[pnum] = max(longest_by_node) if len(longest_by_node) > 0 else 0
 
-        #consult features to make decision (AFTER above updates)
-
+        #compute value of features given current game state
+        
+        #get possible actions from agents
+        possible_actions = [a.decide(game.copy(), pnum) for a in self.agents]
+        best_val = None
+        best_action = None
+        for a in possible_actions:
+            #based on action a
+            game_after_a = game.copy()
+            game_after_a.make_move(a.function, a.args)
+            evaluated_features = [f(game_after_a, pnum) for f in self.features]
+            #TODO: scale features?
+            q_val = [f * w for f, w in zip(evaluated_features, self.weights)]
+            if best_val is None or q_val > best_val:
+                best_val = q_val
+                best_action = a
+        
+        #take action
+        return best_action
+    
     def feature_num_players(self, game, pnum):
         return game.number_of_players()
     
@@ -175,3 +204,15 @@ class ApproximateQLearningAgent(Agent):
 
     def feature_wild_cards_available(self, game, pnum):
         return game.train_cards_face_up["wild"]
+    
+    def update(self, state, action, next_state, reward):
+        #TODO: write function to update weights based on results
+        #reward=points at end of game?? or average points in games that result or something idrk
+        #need to decide on alpha (learning rate) and discount factor
+        pass
+
+    def train_decide(self, state):
+        #TODO: write function to decide when training
+        #with probability epsilon, randomly decide between the agents
+        #with probabiliity 1-epsilon, just take the real action
+        pass
