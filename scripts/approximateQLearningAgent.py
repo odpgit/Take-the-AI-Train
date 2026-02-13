@@ -7,62 +7,15 @@ from oneStepThinkerAgent import OneStepThinkerAgent
 from pathAgent import PathAgent
 
 #Question: how to handle storing feature weights?
-#   Options: include training function that must be run every time before actually running agent for gameplay
-#   DO THIS  include training function that only needs to be run once (and stores results with pickle to load in at __init__)
-#Question: which features to weigh?
-#             Which features are avilable in game class?
-#               - Board (graph)
-#               - Point Table
-#               - Destination Deck
-#               - Train Deck
-#               - Train Cards Face Up
-#               - Number of Players: self.players[self.current_player].number_of_trains
-#               - Current Player
-#               - Players Choosing Destination Cards: set to True in init
-#               - Who Went First: random. Not useful.
-#               - Last Turn Player
-#               - Moves Reference: just a lookup for specific move functions. Not useful.
-#               - Rules Variants
-#               - Number of Current Draws
-# returnCurrentPoints function?
-# findMaxWeightSumForNode function - pass in a player and start node, can calculate longest route
-#           Expensive - need to call for each start node. Store longest route for each player locally during game, update with moves?
+#   Answer:include training function that only needs to be run once (and stores results with pickle to load in at __init__)
 
 #Glenn: features involving the action - know what action each of the four agents would pick
 #       "this action scores points for me, completes card, claims route, picks useful traincard etc."
 
-#   TENTATIVE LIST
-#   (0) Number of players in game (if not fixed)
-#   (1) Minimum number of trains left among all players
-#   (2) Number of trains behind player with longest route
-#   (3) Minimum number of possible paths to complete a destination card
-#   (4) Sum of points remaining to complete all destination cards in hand
-#   (5) TRACTABLE? Number of train car cards needed to complete any of the destination cards in hand
-#   (6) TRACTABLE? Number of face-up train car cards that let you complete a route needed for a destination card 
-#   (TODO): Current points compared to others
-#   (TODO): Wild cards available
-#   (7) Turn number
-
-#   General strategies of each agent
-#   (Hungry Agent)      Accumulates destination cards until a threshold is reached. Keeps destination cards that maximize points scored/train tokens needed
-#                       Generates (and recalculates) list of routes needed to connect any city in any card to any other city in any card
-#                       Evaluates which train cards are needed, builds priority list based on how many of each are required
-#                       For each turn: prioritizes drawing destination cards, then claiming routes, then drawing cards
-#   (Route/Path Agent)  Only uses destination cards from the start of the game
-#                       Priority queue of routes needed to complete destination cards.
-#                           Score is sum of point value and 2x point value (b/c potential penalty) of the associated destination card
-#                       For each turn: prioritizes claiming any of the top routes in the priority queue, then draw train car cards of highest priority route
-#   (One Step Agent)    Complete one destination, one route at a time
-#                       Selects destination cards like Hungry, but redraws when all complete
-#                       Prioritize cards not completed worth most points. Among those, prioritizes least expensive (# cards needed to claim it and # cards agent holding) routes
-#                       Tries to claim route with highest priority, if not then draw cards of that route's color.
-#                           Else, draws destination cards if >= 5 trains left. Else, claims largest route possible with # trains left
-#   (Long Route Agent)  Selects destination cards like One Step/Hungry, no redraw.
-#                       Among all routes needed for destination cards, prioritizes longer routes, gray routes, routes that require fewest additional draws
-#                           If destination cards complete, selects among all unclaimed routes of size 3 or more
 # Make sure to: train against rotating set of agents
 #           2-player game against each alone equal # of times? 4-player game against 2 of 3 rotating?        
-#         
+#
+
 class ApproximateQLearningAgent(Agent):
     def __init__(self, numPlayers):
         self.features = [getattr(self, name) for name in self.__class__.__dict__ 
@@ -129,8 +82,6 @@ class ApproximateQLearningAgent(Agent):
             player_graph = game.player_graph(pnum)
             longest_by_node = [self.findMaxWeightSumForNode(player_graph, v, []) for v in player_graph.nodes()]
             self.longest_route_by_player[pnum] = max(longest_by_node) if len(longest_by_node) > 0 else 0
-
-        #compute value of features given current game state
         
         #get possible actions from agents
         possible_actions = [a.decide(game.copy(), pnum) for a in self.agents]
@@ -140,6 +91,7 @@ class ApproximateQLearningAgent(Agent):
             #based on action a
             game_after_a = game.copy()
             game_after_a.make_move(a.function, a.args)
+            #compute value of features given game state after taking action a from current game state
             evaluated_features = [f(game_after_a, pnum) for f in self.features]
             #TODO: scale features?
             q_val = [f * w for f, w in zip(evaluated_features, self.weights)]
@@ -205,11 +157,28 @@ class ApproximateQLearningAgent(Agent):
     def feature_wild_cards_available(self, game, pnum):
         return game.train_cards_face_up["wild"]
     
-    def update(self, state, action, next_state, reward):
+    def update(self, game, pnum, action, next_game, reward):
         #TODO: write function to update weights based on results
-        #reward=points at end of game?? or average points in games that result or something idrk
+        # Turn-to-turn depends on other players - don't want to lose 10 for taking a good action but losing longest route
         #need to decide on alpha (learning rate) and discount factor
         pass
+
+        #get possible actions from agents
+        #PROBLEM: agents use some randomness in deciding their moves!!
+        # possible_actions = [a.decide(game.copy(), pnum) for a in self.agents]
+        # best_val = None
+        # best_action = None
+        # for a in possible_actions:
+        #     #based on action a
+        #     game_after_a = game.copy()
+        #     game_after_a.make_move(a.function, a.args)
+        #     #compute value of features given game state after taking action a from current game state
+        #     evaluated_features = [f(game_after_a, pnum) for f in self.features]
+        #     #TODO: scale features?
+        #     q_val = [f * w for f, w in zip(evaluated_features, self.weights)]
+        #     if best_val is None or q_val > best_val:
+        #         best_val = q_val
+        #         best_action = a
 
     def train_decide(self, state):
         #TODO: write function to decide when training

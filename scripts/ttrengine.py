@@ -8,7 +8,6 @@ import time
 import copyreg
 import types
 
-
 def _pickle_method(m):
 	if m.im_self is None:
 		return getattr, (m.im_class, m.im_func.func_name)
@@ -45,6 +44,49 @@ class GameHandler:
 		self.total_move_count = []
 		self.first_player = -1
 		self.total_relative_edges_left = []
+		self.train = True # NOTE: set this to False when not training!!
+	
+	def eval_rewards(self, pnum, move, args):
+		#Ideas for rewards
+        #Claiming routes: earns reward immediately
+        #Failing to complete routes: earns reward at end of game
+        #      Slight loss every turn you haven't done it??
+        #Completing ticket: earns reward immediately
+        #   Claiming route that is part of ticket earns some kind of bonus??
+        #   Answer: do without, test, and tweak as necessary
+        #Keeping longest route: only at end of game.
+		#TODO: check out RL paper for their ideas about reward shaping, and confirm via testing how destination card pulling works here
+		if move == 'chooseDestinationCards':
+			return 0
+		elif move == 'claimRoute':
+			#args: city1, city2, color
+			#check if route claimed successfully
+			conn = None
+			if args[2] != 'gray':
+				route = self.game.board.get_connection(args[0], args[1], args[2])
+				if route['owner'] != pnum:
+					#route claim unsuccessful
+					return 0
+			else:
+				for c in self.game.board.get_connection(args[0], args[1]):
+					if c['owner'] == pnum:
+						route = c
+						break 
+				if route is None:
+					#route claim unsuccessful
+					return 0
+			
+			reward = 0
+
+			#(1) score points based on the point table
+			reward += point_table()[route['weight']]
+
+			#(2) score points if this route caused previously-incomplete destination card(s) to be completed
+			player = self.game.players[pnum]
+		elif move == 'drawDestinationCards':
+			return 0
+		elif move == 'drawTrainCard':
+			return 0
 
 	def play(self, runnum, save=False):
 		movelog = []
@@ -60,6 +102,9 @@ class GameHandler:
 			#print(move.function)
 			#print(move.args)
 			self.game.make_move(move.function, move.args)
+			if self.train:
+				pass
+				#self.eval_rewards(i, move.function, move.args)
 		
 		#print (self.game.players_choosing_destination_cards)
 		self.first_player = self.game.current_player
@@ -195,6 +240,7 @@ class Player:
 		self.graph = nx.Graph()
 		self.choosing_destination_cards = False
 		self.drawing_train_cards = False
+		self.completed_destination_cards = set()
 
 	def copy(self):
 		p = Player(self.hand.copy(), self.number_of_trains, self.points)
@@ -208,11 +254,6 @@ class Player:
 	def print_destination_cards(self):
 		for card in self.hand_destination_cards:
 			print(card)
-
-
-
-
-
 
 #Data structure to store move data
 class Move:

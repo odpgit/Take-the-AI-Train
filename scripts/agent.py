@@ -1,6 +1,24 @@
 from abc import ABC, abstractmethod
 import networkx as nx
 
+#   General strategies of each agent
+#   (Hungry Agent)      Accumulates destination cards until a threshold is reached. Keeps destination cards that maximize points scored/train tokens needed
+#                       Generates (and recalculates) list of routes needed to connect any city in any card to any other city in any card
+#                       Evaluates which train cards are needed, builds priority list based on how many of each are required
+#                       For each turn: prioritizes drawing destination cards, then claiming routes, then drawing cards
+#   (Route/Path Agent)  Only uses destination cards from the start of the game
+#                       Priority queue of routes needed to complete destination cards.
+#                           Score is sum of point value and 2x point value (b/c potential penalty) of the associated destination card
+#                       For each turn: prioritizes claiming any of the top routes in the priority queue, then draw train car cards of highest priority route
+#   (One Step Agent)    Complete one destination, one route at a time
+#                       Selects destination cards like Hungry, but redraws when all complete
+#                       Prioritize cards not completed worth most points. Among those, prioritizes least expensive (# cards needed to claim it and # cards agent holding) routes
+#                       Tries to claim route with highest priority, if not then draw cards of that route's color.
+#                           Else, draws destination cards if >= 5 trains left. Else, claims largest route possible with # trains left
+#   (Long Route Agent)  Selects destination cards like One Step/Hungry, no redraw.
+#                       Among all routes needed for destination cards, prioritizes longer routes, gray routes, routes that require fewest additional draws
+#                           If destination cards complete, selects among all unclaimed routes of size 3 or more
+
 class Agent(ABC):
 	@abstractmethod
 	def decide(self, game, pnum):
