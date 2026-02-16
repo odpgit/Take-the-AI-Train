@@ -9,6 +9,8 @@ class HungryAgent(Agent):
 		self.colors_needed = {}
 		self.routes_by_color = {}
 		self.current_threshold = 0
+		self.list_of_cities = []
+		self.d_points = 0
 
 	def decide(self, game, pnum):
 		possible_moves = game.get_possible_moves(pnum)
@@ -16,61 +18,14 @@ class HungryAgent(Agent):
 		free_connections_graph = self.free_routes_graph(pnum, game.board.graph, game.number_of_players)
 		joint_graph = self.joint_graph(game, pnum)
 
-		list_of_cities = []
-		d_points = 0
+		self.list_of_cities = []
+		self.d_points = 0
 		for d in game.players[pnum].hand_destination_cards:
 			if d.destinations[0] in joint_graph and d.destinations[1] in joint_graph:
-				list_of_cities.extend(d.destinations)
-				d_points += d.points
+				self.list_of_cities.extend(d.destinations)
+				self.d_points += d.points
 
 		#print '1'
-
-		if possible_moves[0].function == 'chooseDestinationCards':
-			best_ratio = 0
-			min_over_train_requirements = game.players[pnum].number_of_trains
-			best_move = None
-			min_points = None
-			for m in possible_moves:
-				destinations = list(list_of_cities)
-				temp = []
-				points = d_points
-				for d in m.args[1]:
-					destinations.extend(d.destinations)
-					points += d.points
-				if min_points == None or points < min_points:
-					min_points = points
-					min_move = m
-				destinations = list(set(destinations))
-				x = self.generate_game_plan(destinations, joint_graph)
-				#if x[0] == None or x[1] == None:
-				#	fitness = 0
-				#else:
-				fitness = 0
-				if x[0] != None:
-					fitness = float((points + x[0])) / float(x[1])
-				if x[1] <= game.players[pnum].number_of_trains - 5:
-					if fitness > best_ratio:
-						best_ratio = fitness
-						best_move = m
-						croutes = x[2]
-						cneeded = x[3]
-				elif x[1] <= game.players[pnum].number_of_trains:
-					if x[1] < min_over_train_requirements:
-						min_over_train_requirements = x[1]
-						best_move = m
-						croutes = x[2]
-						cneeded = x[3]
-			if best_move == None:
-				return min_move
-			
-			self.colors_needed = cneeded
-			self.routes_by_color = croutes
-			self.current_threshold = x[1]
-			for i in range(0, len(game.players)):
-				if i != pnum:
-					self.players_previous_points += game.players[i].points
-
-			return best_move
 
 		#print '2'
 
@@ -79,7 +34,7 @@ class HungryAgent(Agent):
 			total_current_points += game.players[i].points
 
 		if self.players_previous_points < total_current_points:
-			x = self.generate_game_plan(list_of_cities, joint_graph)
+			x = self.generate_game_plan(self.list_of_cities, joint_graph)
 			self.colors_needed = x[3]
 			self.routes_by_color = x[2]
 			self.players_previous_points = total_current_points
@@ -154,7 +109,6 @@ class HungryAgent(Agent):
 					if self.colors_needed[route[2]] <= 0:
 						return move
 
-		#print '5'
 
 		moves_by_color = {}
 		for move in possible_moves:
@@ -179,12 +133,6 @@ class HungryAgent(Agent):
 			if max_color_available[0].upper() in moves_by_color:
 				return moves_by_color[max_color_available[0].upper()]
 
-		#print 'HERE'
-		#print game.players[pnum].hand
-		#print self.routes_by_color
-		#print self.colors_needed
-		#for move in possible_moves:
-		#	print move.function + "   " + str(move.args)
 		if 'TOP' in moves_by_color:
 			return moves_by_color['TOP']
 		
@@ -359,3 +307,51 @@ class HungryAgent(Agent):
 				total_points_from_routes += point_dict[weight]
 
 		return [total_points_from_routes, sum(colors_needed.values()), color_routes, colors_needed]
+
+
+	def choose_destination_cards(self, moves, game, pnum, num_keep):
+		best_ratio = 0
+		min_over_train_requirements = game.players[pnum].number_of_trains
+		best_move = None
+		min_points = None
+		for m in moves:
+			destinations = list(self.list_of_cities)
+			temp = []
+			points = self.d_points
+			for d in m.args[1]:
+				destinations.extend(d.destinations)
+				points += d.points
+			if min_points == None or points < min_points:
+				min_points = points
+				min_move = m
+			destinations = list(set(destinations))
+			x = self.generate_game_plan(destinations, self.joint_graph(game, pnum))
+			#if x[0] == None or x[1] == None:
+			#	fitness = 0
+			#else:
+			fitness = 0
+			if x[0] != None:
+				fitness = float((points + x[0])) / float(x[1])
+			if x[1] <= game.players[pnum].number_of_trains - 5:
+				if fitness > best_ratio:
+					best_ratio = fitness
+					best_move = m
+					croutes = x[2]
+					cneeded = x[3]
+			elif x[1] <= game.players[pnum].number_of_trains:
+				if x[1] < min_over_train_requirements:
+					min_over_train_requirements = x[1]
+					best_move = m
+					croutes = x[2]
+					cneeded = x[3]
+		if best_move == None:
+			return min_move
+		
+		self.colors_needed = cneeded
+		self.routes_by_color = croutes
+		self.current_threshold = x[1]
+		for i in range(0, len(game.players)):
+			if i != pnum:
+				self.players_previous_points += game.players[i].points
+
+		return best_move

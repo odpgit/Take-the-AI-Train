@@ -18,13 +18,6 @@ class PathAgent(Agent):
 			f1.close()
 			return None
 
-		if possible_moves[0].function == 'chooseDestinationCards':
-			for m in possible_moves:
-				#if len(m.args[1]) == 3:
-				if len(m.args[1]) == game.destination_deck_draw_rules[0]:
-					#print 'd'
-					return m
-	
 		p_queue = queue.PriorityQueue()
 
 		list_of_destinations = self.destinations_not_completed(game, pnum, game.player_graph(pnum))
@@ -221,3 +214,9 @@ class PathAgent(Agent):
 		#print game.board.get_free_connection(paths_to_take[0][0], paths_to_take[0][1], 'YELLOW')
 		#print game.board.get_free_connection(paths_to_take[0][0], paths_to_take[0][1], 'PINK')
 		#print game.board.get_free_connection(paths_to_take[0][0], paths_to_take[0][1], 'WHITE')
+
+	def choose_destination_cards(self, moves, game, pnum, num_keep):
+		for m in moves:
+			if len(m.args[1]) == game.destination_deck_draw_rules[0]:
+				#print 'd'
+				return m

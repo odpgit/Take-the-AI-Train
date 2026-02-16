@@ -24,6 +24,11 @@ class Agent(ABC):
 	def decide(self, game, pnum):
 		"Must be implemented by subclass"
 		pass
+
+	@abstractmethod
+	def choose_destination_cards(self, moves, game, pnum, num_keep):
+		"Must be implemented by subclass"
+		pass
 	
 	def free_routes_graph(self, pnum, graph, number_of_players, min_weight_edge=0):
 		G = nx.MultiGraph()

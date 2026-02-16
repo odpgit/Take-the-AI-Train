@@ -7,6 +7,7 @@ import pickle
 import time
 import copyreg
 import types
+from agent import Agent
 
 def _pickle_method(m):
 	if m.im_self is None:
@@ -35,7 +36,7 @@ class LogMove:
 	def __setstate__(self, d): self.__dict__.update(d)
 
 class GameHandler:
-	def __init__(self, game, agents, filename):
+	def __init__(self, game, agents: list[Agent], filename):
 		self.game = game
 		self.agents = agents
 		self.filename = filename
@@ -56,8 +57,12 @@ class GameHandler:
         #   Answer: do without, test, and tweak as necessary
         #Keeping longest route: only at end of game.
 		#TODO: check out RL paper for their ideas about reward shaping, and confirm via testing how destination card pulling works here
-		if move == 'chooseDestinationCards':
-			return 0
+		if move == 'drawDestinationCards':
+			reward = 0
+			cards = args[1]
+			for c in cards:
+				#reward shaping: subtract off tickets' value to represent negative gain of tickets
+				reward -= c.points
 		elif move == 'claimRoute':
 			#args: city1, city2, color
 			#check if route claimed successfully
@@ -83,32 +88,46 @@ class GameHandler:
 
 			#(2) score points if this route caused previously-incomplete destination card(s) to be completed
 			player = self.game.players[pnum]
-		elif move == 'drawDestinationCards':
-			return 0
+
 		elif move == 'drawTrainCard':
 			return 0
+		
+	def choose_destination_cards(self, pnum, num_keep):
+		#chooses destination cards for a specified player
+		#assumes that they have already been drawn into player hand - just need to know which to keep
+		pmoves = []
+		dest_card_set = self.game.list_pending_destination_cards(pnum)
+		for x in range(num_keep, len(dest_card_set) + 1):
+			comb = itertools.combinations(dest_card_set, x)
+			for cardset in comb:
+				pmoves.append(Move('chooseDestinationCards', [pnum, list(cardset)]))
+		
+		return self.agents[pnum].choose_destination_cards(pmoves, self.game, pnum, num_keep)
 
 	def play(self, runnum, save=False):
 		movelog = []
 		start = time.time()
 		
 		self.game.setup()
+
+		for i in range(self.game.number_of_players):
+			chosen_move = self.choose_destination_cards(i, self.game.destination_deck_draw_rules[1])
+			self.game.choose_destination_cards(i, chosen_move.args[1], self.game.destination_deck_draw_rules[1])
 		
+		#Seems like this is the first destination card pull?
 		for i in range(0, self.game.number_of_players):
-			#print(i)
 			move = self.agents[i].decide(self.game.copy(), i)
 			movelog.append(LogMove(i, move.function, move.args))
-			#print("rn: " + str(runnum))
-			#print(move.function)
-			#print(move.args)
 			self.game.make_move(move.function, move.args)
+			# print(f"Player dest. cards for player {i}:")
+			# self.game.players[i].print_destination_cards()
 			if self.train:
 				pass
 				#self.eval_rewards(i, move.function, move.args)
 		
-		#print (self.game.players_choosing_destination_cards)
 		self.first_player = self.game.current_player
 
+		#All subsequent turns after pulling first destination cards
 		while self.game.game_over == False:
 			#print("Current Player: " + str(self.game.current_player) + ", " + str(self.game.players[self.game.current_player].number_of_trains)) + ', ' + str(self.game.players[self.game.current_player].points)
 			if self.last_player != self.game.current_player:
@@ -125,11 +144,24 @@ class GameHandler:
 				pickle.dump(self.game, f1)
 				f1.close()
 				return
-			#print(move.function)
-			#print self.game.players[self.game.current_player].hand
+			cur_player = self.game.current_player
 			self.game.make_move(move.function, move.args)
-			self.turn_count += 1
 
+			if move.function == 'drawDestinationCards':
+				chosen_move = self.choose_destination_cards(cur_player, self.game.destination_deck_draw_rules[3])
+				self.game.choose_destination_cards(cur_player, chosen_move.args[1], self.game.destination_deck_draw_rules[3])
+				
+			if move.function == 'drawDestinationCards':
+				print(f"NOW on turn {self.turn_count} player {cur_player} is DRAWING dest. cards with a current hand of:")
+				self.game.players[cur_player].print_destination_cards()
+			
+			if self.train:
+				pass
+
+			#Only increment turn count if current player changed
+			#Matters b/c drawing 1 of 2 cards will count as a move for make_move but not change current player
+			if cur_player != self.game.current_player:
+				self.turn_count += 1
 
 		#for i in range(0, self.game.number_of_players):
 		#	print("Player " + str(i+1) + ": " + str(self.game.players[i].points))
@@ -229,7 +261,6 @@ class DestinationCountryCard(DestinationCard):
 #hand => list of train cards (strings) in the player's hand
 #number_of_trains => integer of how many trains the player has left (players start with 45 trains)
 #points => integer of the number of points the player currently has
-#choosing_destination_cards => boolean to indicate if the player is picking destination cards to keep
 #drawing_train_cards => boolean to indicate that the player drew 1 train cards and needs to draw 1 more
 class Player:
 	def __init__(self, hand, number_of_trains, points):
@@ -238,7 +269,6 @@ class Player:
 		self.number_of_trains = number_of_trains
 		self.points = points
 		self.graph = nx.Graph()
-		self.choosing_destination_cards = False
 		self.drawing_train_cards = False
 		self.completed_destination_cards = set()
 
@@ -246,7 +276,6 @@ class Player:
 		p = Player(self.hand.copy(), self.number_of_trains, self.points)
 		#p.hand_destination_cards = copy.copy(self.hand_destination_cards)
 		p.hand_destination_cards = self.hand_destination_cards[:]	
-		p.choosing_destination_cards = self.choosing_destination_cards
 		p.drawing_train_cards = self.drawing_train_cards
 		p.graph = nx.Graph(self.graph)
 		return p
@@ -375,7 +404,6 @@ class Board:
 #current_player => index of the player in the list of players who should make the next move
 #------------------------
 #train_deck_face_up => list of train cards that are currently face up on the table (always has length of 5 after setup)
-#players_choosing_destination_cards => boolean that is true while all players are choosing the destination cards they want at the beginning of the game (only at the beginning of the game)
 #last_turn_player => index of the player who has the last turn. After it has a value > -1, the next time this player makes a move, the game will end
 
 
@@ -396,7 +424,6 @@ class Board:
 #the same concept is applied to all other move. If a move function has no parameters just pass an empty list, for example:
 #game.make_move(game.move_drawDestinationCards, [])
 
-######### REMEMBER: the first move every player makes should be to choose which destination cards they want to keep (they need to keep 2 or 3 out of the 3 they get at the setup)
 class Game:
 	def __init__(self, board, point_table, destination_deck, train_deck, players, current_player, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False]):
 		self.board = board
@@ -407,7 +434,6 @@ class Game:
 		self.number_of_players = len(players)
 		self.players = players
 		self.current_player = current_player
-		self.players_choosing_destination_cards = False
 		self.last_turn_player = -1
 		self.moves_reference = {}
 		self.game_over = False
@@ -439,7 +465,6 @@ class Game:
 	def __setstate__(self, d): self.__dict__.update(d)
 
 	def set_moves_reference(self):
-		self.moves_reference['chooseDestinationCards'] = self.move_choose_destination_cards
 		self.moves_reference['claimRoute'] = self.move_claimRoute
 		self.moves_reference['drawDestinationCards'] = self.move_drawDestinationCards
 		self.moves_reference['drawTrainCard'] = self.move_drawTrainCard
@@ -453,7 +478,6 @@ class Game:
 		g.set_moves_reference()
 		g.destination_deck = self.destination_deck.copy()
 		g.train_deck = self.train_deck.copy()
-		g.players_choosing_destination_cards = self.players_choosing_destination_cards
 		g.last_turn_player = self.last_turn_player
 		g.train_cards_face_up = self.train_cards_face_up.copy()
 		#g.number_of_train_cards_first_turn = self.number_of_train_cards_first_turn
@@ -469,7 +493,6 @@ class Game:
 		return g
 
 	#sets up the initial state of the players hands, face up cards and etc
-	#remember, the first move of every player should be to choose the destination cards they want to keep
 	def setup(self):
 		self.set_moves_reference()
 
@@ -491,11 +514,8 @@ class Game:
 					self.players[i].hand["destination"] = []
 				self.players[i].hand["destination"].append(self.draw_card(self.destination_deck))
 
-			self.players[i].choosing_destination_cards = True
-		
 		self.current_player = random.choice([x for x in range(0, self.number_of_players)])
 		self.who_went_first = self.current_player
-		self.players_choosing_destination_cards = True
 
 		for i in range(0, self.number_of_face_up_train_cards):
 			self.addFaceUpTrainCard()
@@ -562,18 +582,11 @@ class Game:
 
 		return self.players[player_index].hand["destination"]
 
-	#makes the move of choosing the destination cards to keep
-	def move_choose_destination_cards(self, args):
-		#for card in args[1]:
-			#print card
-		self.choose_destination_cards(args[0], args[1])
-
 	#chooses which destination cards to keep
 	#player => index of the player choosing the cards
 	#cards => list of destination cards (objects of class DestinationCard) to keep. All the other destination cards not in the list that the player currently has will be removed from the game
 	#PS: Destination cards get added to the players hand of train cards until he decides which ones to keep
-	def choose_destination_cards(self, player, cards):
-		min_num_cards = self.destination_deck_draw_rules[1] if self.players_choosing_destination_cards else self.destination_deck_draw_rules[3]
+	def choose_destination_cards(self, player, cards, min_num_cards):
 
 		#print "cards:" + str(cards)
 		
@@ -584,21 +597,11 @@ class Game:
 				#self.players[player].hand.remove(card)
 				self.players[player].hand_destination_cards.append(card)
 
-			self.players[player].choosing_destination_cards = False
-
-			if self.players_choosing_destination_cards:
-				for i in range(0, self.number_of_players):
-					if self.players[i].choosing_destination_cards == True:
-						i = i - 1
-						break
-				if i == self.number_of_players - 1:
-					self.players_choosing_destination_cards = False
-
 			#print (self.players[player].hand)
 			#raw_input('wait')
-
-		if min_num_cards == self.destination_deck_draw_rules[3] and len(cards) >= min_num_cards:
-			self.next_players_turn()
+			return True
+		else:
+			return False
 
 	#tests whether the player has the cards needed to claim a route
 	#player_index => index of the player
@@ -772,7 +775,6 @@ class Game:
 		return self.drawDestinationCards()
 
 	#draws 3 new destination cards of which the player is required to keep at least 1 (rulebook)
-	#the player that does this move needs to call the choose destination cards moves right after.
 	def drawDestinationCards(self):
 		if sum(self.destination_deck.deck.values()) == 0:
 			return False
@@ -782,8 +784,6 @@ class Game:
 			self.players[self.current_player].hand['destination'] = []
 		for i in range(0, x):
 			self.players[self.current_player].hand['destination'].append(self.draw_card(self.destination_deck))
-
-		self.players[self.current_player].choosing_destination_cards = True
 
 		return True
 
@@ -861,18 +861,14 @@ class Game:
 		last_turn = False
 		if self.current_player == self.last_turn_player:
 			last_turn = True
-		if not self.players[self.current_player].choosing_destination_cards or (self.players[self.current_player].choosing_destination_cards and move == 'chooseDestinationCards'):
-
-			if move == 'chooseDestinationCards':
-				self.move_choose_destination_cards(args)
-			elif move == 'claimRoute':
-				self.move_claimRoute(args)
-			elif move == 'drawDestinationCards':
-				self.move_drawDestinationCards(args)
-			elif move == 'drawTrainCard':
-				self.move_drawTrainCard(args)
-			else:
-				move(args)
+		if move == 'claimRoute':
+			self.move_claimRoute(args)
+		elif move == 'drawDestinationCards':
+			self.move_drawDestinationCards(args)
+		elif move == 'drawTrainCard':
+			self.move_drawTrainCard(args)
+		else:
+			move(args)
 		if last_turn:
 			self.calculatePoints()
 			self.game_over = True
@@ -1090,21 +1086,7 @@ class Game:
 
 	def get_possible_moves(self, player_index):
 		pmoves = []
-		if self.players_choosing_destination_cards == True:
-			dest_card_set = self.list_pending_destination_cards(player_index)
-			for x in range(self.destination_deck_draw_rules[1], len(dest_card_set) + 1):
-				comb = itertools.combinations(dest_card_set, x)
-				for cardset in comb:
-					pmoves.append(Move('chooseDestinationCards', [player_index, list(cardset)]))
-					#pmoves.append(Move(self.move_choose_destination_cards, [player_index, list(cardset)]))
-		elif self.players[player_index].choosing_destination_cards == True:
-			dest_card_set = self.list_pending_destination_cards(player_index)
-			for x in range(self.destination_deck_draw_rules[3], len(dest_card_set) + 1):
-				comb = itertools.combinations(dest_card_set, x)
-				for cardset in comb:
-					pmoves.append(Move('chooseDestinationCards', [player_index, list(cardset)]))
-					#pmoves.append(Move(self.move_choose_destination_cards, [player_index, list(cardset)]))
-		elif self.players[player_index].drawing_train_cards == True and sum(self.train_deck.deck.values()) > 0:
+		if self.players[player_index].drawing_train_cards == True and sum(self.train_deck.deck.values()) > 0:
 			pmoves.append(Move('drawTrainCard', 'top'))
 			for card in set(self.train_cards_face_up):
 				if (self.switzerland_variant or self.nordic_countries_variant) and self.train_cards_face_up[card] > 0:

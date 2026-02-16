@@ -12,19 +12,6 @@ class OneStepThinkerAgent(Agent):
 
 	def decide(self, game, pnum):
 		possible_moves = game.get_possible_moves(pnum)
-
-		if game.players_choosing_destination_cards:
-			for m in possible_moves:
-				#if len(m.args[1]) == 3:
-				if len(m.args[1]) == game.destination_deck_draw_rules[0]:
-					#print 'd'
-					return m
-		
-		elif possible_moves[0].function == 'chooseDestinationCards':
-			self.players_previous_points = -1
-			#list_of_destinations = []
-
-			return self.chooseDestinations(possible_moves, game, pnum)
 		
 		claim_route_moves = []
 		draw_train_card_moves = []
@@ -92,11 +79,20 @@ class OneStepThinkerAgent(Agent):
 		
 		return random.choice(possible_moves)
 
-	def chooseDestinations(self, moves, game, pnum):
+	def choose_destination_cards(self, moves, game, pnum, num_keep):
+		if num_keep == game.destination_deck_draw_rules[1]:
+			for m in moves:
+				if len(m.args[1]) == game.destination_deck_draw_rules[0]:
+					#print 'd'
+					return m
+
+		#always called before chooseDestinations
+		self.players_previous_points = -1
+
 		best_move = (0, None)
 		least_worst_move = (0, None)
 		joint_graph = self.joint_graph(game, pnum)
-		
+
 		for m in moves:
 			current_move_value = 0
 			number_of_trains_needed = 0			

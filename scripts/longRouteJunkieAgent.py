@@ -4,6 +4,7 @@ import random
 from agent import Agent
 
 class LongRouteJunkieAgent(Agent):
+	min_weight_edge = 3
 	def __init__(self):
 		self.current_objective_route = None
 		self.current_objective_color = None
@@ -11,12 +12,6 @@ class LongRouteJunkieAgent(Agent):
 
 	def decide(self, game, pnum):
 		possible_moves = game.get_possible_moves(pnum)
-		
-		if possible_moves[0].function == 'chooseDestinationCards':
-			self.players_previous_points = -1
-			#list_of_destinations = []
-
-			return self.chooseDestinations(possible_moves, game, pnum, 3)
 
 		claim_route_moves = []
 		draw_train_card_moves = []
@@ -138,10 +133,13 @@ class LongRouteJunkieAgent(Agent):
 		except:
 			return [float(-1.0 * points), float(50)]
 
-	def chooseDestinations(self, moves, game, pnum, min_weight_edge):
+	def choose_destination_cards(self, moves, game, pnum, num_keep):
+		#previous: always called before chooseDestinations
+		self.players_previous_points = -1
+
 		best_move = (0, None)
 		least_worst_move = (0, None)
-		joint_graph = self.joint_graph(game, pnum, min_weight_edge)
+		joint_graph = self.joint_graph(game, pnum, LongRouteJunkieAgent.min_weight_edge)
 		
 		for m in moves:
 			current_move_value = 0
