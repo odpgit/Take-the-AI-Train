@@ -56,17 +56,17 @@ class GameHandler:
         #   Claiming route that is part of ticket earns some kind of bonus??
         #   Answer: do without, test, and tweak as necessary
         #Keeping longest route: only at end of game.
-		#TODO: check out RL paper for their ideas about reward shaping, and confirm via testing how destination card pulling works here
 		if move == 'drawDestinationCards':
 			reward = 0
 			cards = args[1]
 			for c in cards:
-				#reward shaping: subtract off tickets' value to represent negative gain of tickets
+				#reward shaping: subtract off tickets' value to represent negative impact of tickets
 				reward -= c.points
+			return reward
 		elif move == 'claimRoute':
 			#args: city1, city2, color
 			#check if route claimed successfully
-			conn = None
+			route = None
 			if args[2] != 'gray':
 				route = self.game.board.get_connection(args[0], args[1], args[2])
 				if route['owner'] != pnum:
@@ -88,7 +88,13 @@ class GameHandler:
 
 			#(2) score points if this route caused previously-incomplete destination card(s) to be completed
 			player = self.game.players[pnum]
+			player_graph = self.player_graph(pnum)
+			for card in player.hand_destination_cards:
+				if card not in player.completed_destination_cards and nx.has_path(player_graph, card.destinations[0], card.destinations[1]):
+					player.completed_destination_cards.add(card)
+					reward += 2 * card.points
 
+			return reward
 		elif move == 'drawTrainCard':
 			return 0
 		
@@ -110,24 +116,17 @@ class GameHandler:
 		
 		self.game.setup()
 
+		#Choose destination card at game start
 		for i in range(self.game.number_of_players):
 			chosen_move = self.choose_destination_cards(i, self.game.destination_deck_draw_rules[1])
 			self.game.choose_destination_cards(i, chosen_move.args[1], self.game.destination_deck_draw_rules[1])
-		
-		#Seems like this is the first destination card pull?
-		for i in range(0, self.game.number_of_players):
-			move = self.agents[i].decide(self.game.copy(), i)
-			movelog.append(LogMove(i, move.function, move.args))
-			self.game.make_move(move.function, move.args)
-			# print(f"Player dest. cards for player {i}:")
-			# self.game.players[i].print_destination_cards()
 			if self.train:
-				pass
-				#self.eval_rewards(i, move.function, move.args)
+				reward = -1 * sum([c.points for c in chosen_move.args[1]])
+				#call function on AQL agent
 		
 		self.first_player = self.game.current_player
 
-		#All subsequent turns after pulling first destination cards
+		#All turns
 		while self.game.game_over == False:
 			#print("Current Player: " + str(self.game.current_player) + ", " + str(self.game.players[self.game.current_player].number_of_trains)) + ', ' + str(self.game.players[self.game.current_player].points)
 			if self.last_player != self.game.current_player:
@@ -144,19 +143,17 @@ class GameHandler:
 				pickle.dump(self.game, f1)
 				f1.close()
 				return
+			
 			cur_player = self.game.current_player
 			self.game.make_move(move.function, move.args)
 
 			if move.function == 'drawDestinationCards':
 				chosen_move = self.choose_destination_cards(cur_player, self.game.destination_deck_draw_rules[3])
 				self.game.choose_destination_cards(cur_player, chosen_move.args[1], self.game.destination_deck_draw_rules[3])
-				
-			if move.function == 'drawDestinationCards':
-				print(f"NOW on turn {self.turn_count} player {cur_player} is DRAWING dest. cards with a current hand of:")
-				self.game.players[cur_player].print_destination_cards()
 			
 			if self.train:
-				pass
+				reward = self.eval_rewards(cur_player, move.function, move.args)
+				#call function on AQL agent
 
 			#Only increment turn count if current player changed
 			#Matters b/c drawing 1 of 2 cards will count as a move for make_move but not change current player
