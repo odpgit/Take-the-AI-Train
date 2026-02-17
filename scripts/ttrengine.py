@@ -46,17 +46,10 @@ class GameHandler:
 		self.first_player = -1
 		self.total_relative_edges_left = []
 		self.train = True # NOTE: set this to False when not training!!
+		self.aql_idx = 0
 	
 	def eval_rewards(self, pnum, move, args):
-		#Ideas for rewards
-        #Claiming routes: earns reward immediately
-        #Failing to complete routes: earns reward at end of game
-        #      Slight loss every turn you haven't done it??
-        #Completing ticket: earns reward immediately
-        #   Claiming route that is part of ticket earns some kind of bonus??
-        #   Answer: do without, test, and tweak as necessary
-        #Keeping longest route: only at end of game.
-		if move == 'drawDestinationCards':
+		if move == 'chooseDestinationCards':
 			reward = 0
 			cards = args[1]
 			for c in cards:
@@ -90,9 +83,10 @@ class GameHandler:
 			player = self.game.players[pnum]
 			player_graph = self.player_graph(pnum)
 			for card in player.hand_destination_cards:
-				if card not in player.completed_destination_cards and nx.has_path(player_graph, card.destinations[0], card.destinations[1]):
-					player.completed_destination_cards.add(card)
-					reward += 2 * card.points
+				if card not in player.completed_destination_cards:
+					if nx.has_path(player_graph, card.destinations[0], card.destinations[1]):
+						player.completed_destination_cards.add(card)
+						reward += 2 * card.points
 
 			return reward
 		elif move == 'drawTrainCard':
@@ -101,6 +95,8 @@ class GameHandler:
 	def choose_destination_cards(self, pnum, num_keep):
 		#chooses destination cards for a specified player
 		#assumes that they have already been drawn into player hand - just need to know which to keep
+
+		#generate moves
 		pmoves = []
 		dest_card_set = self.game.list_pending_destination_cards(pnum)
 		for x in range(num_keep, len(dest_card_set) + 1):
@@ -120,13 +116,14 @@ class GameHandler:
 		for i in range(self.game.number_of_players):
 			chosen_move = self.choose_destination_cards(i, self.game.destination_deck_draw_rules[1])
 			self.game.choose_destination_cards(i, chosen_move.args[1], self.game.destination_deck_draw_rules[1])
-			if self.train:
-				reward = -1 * sum([c.points for c in chosen_move.args[1]])
-				#call function on AQL agent
 		
 		self.first_player = self.game.current_player
 
 		#All turns
+		if self.train:
+			prev_game = None
+			prev_reward = 0
+
 		while self.game.game_over == False:
 			#print("Current Player: " + str(self.game.current_player) + ", " + str(self.game.players[self.game.current_player].number_of_trains)) + ', ' + str(self.game.players[self.game.current_player].points)
 			if self.last_player != self.game.current_player:
@@ -134,6 +131,13 @@ class GameHandler:
 				self.last_player = self.game.current_player
 				if self.game.current_player == self.first_player:
 					self.total_relative_edges_left.append(numberOfRelativeEdges(self.game.board.graph))
+			
+			cur_player = self.game.current_player
+			if self.train and cur_player == self.aql_idx:
+				if prev_game is not None:
+					self.agents[self.aql_idx].update(self.aql_idx, prev_game, self.game, prev_reward)
+				prev_game = self.game.copy()
+				
 			move = self.agents[self.game.current_player].decide(self.game, self.game.current_player)
 			try:
 				movelog.append(LogMove(self.game.current_player, move.function, move.args))
@@ -144,16 +148,16 @@ class GameHandler:
 				f1.close()
 				return
 			
-			cur_player = self.game.current_player
 			self.game.make_move(move.function, move.args)
 
+			if self.train and cur_player == self.aql_idx:
+				prev_reward = self.eval_rewards(cur_player, move.function, move.args)
+
 			if move.function == 'drawDestinationCards':
+				#get move chosen for this player
 				chosen_move = self.choose_destination_cards(cur_player, self.game.destination_deck_draw_rules[3])
+				#execute move in game
 				self.game.choose_destination_cards(cur_player, chosen_move.args[1], self.game.destination_deck_draw_rules[3])
-			
-			if self.train:
-				reward = self.eval_rewards(cur_player, move.function, move.args)
-				#call function on AQL agent
 
 			#Only increment turn count if current player changed
 			#Matters b/c drawing 1 of 2 cards will count as a move for make_move but not change current player

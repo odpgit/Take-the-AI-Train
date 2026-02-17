@@ -17,22 +17,63 @@ from pathAgent import PathAgent
 #
 
 class ApproximateQLearningAgent(Agent):
-    def __init__(self, numPlayers):
+    def __init__(self):
         self.features = [getattr(self, name) for name in self.__class__.__dict__ 
                          if name.startswith("feature_") and callable(getattr(self, name))]
+        
         self.weights = [0] * len(self.features)
         #List of agents to pick actions from.
         #Each agent will have decide() called on it with this agent's pnum, which should keep their fields updated
         self.agents = [HungryAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent(), PathAgent()]
         
-        self.longest_route_by_player = [0] * numPlayers
         self.jgraph = None
         self.remaining_dest = []
         self.paths_planned = {}
         self.cards_needed = emptyCardDict()
         self.num_cards_needed = 0
-        self.turn_number = 0
-
+        self.discount = 0.995
+        self.alpha = 0.01
+    
+    def decide(self, game, pnum):        
+        #get possible actions from agents
+        possible_actions = [a.decide(game.copy(), pnum) for a in self.agents]
+        best_val = None
+        best_action = None
+        for a in possible_actions:
+            #based on action a
+            game_after_a = game.copy()
+            game_after_a.make_move(a.function, a.args)
+            #compute value of features given game state after taking action a from current game state
+            evaluated_features = self.get_features(game_after_a, pnum)
+            #TODO: scale features?
+            q_val = sum([f * w for f, w in zip(evaluated_features, self.weights)])
+            if best_val is None or q_val > best_val:
+                best_val = q_val
+                best_action = a
+        
+        #take action
+        return best_action
+    
+    def choose_destination_cards(self, moves, game, pnum, num_keep):
+        #get possible actions from agents
+        possible_actions = [a.choose_destination_cards(moves.copy(), game.copy(), pnum, num_keep) for a in self.agents]
+        best_val = None
+        best_action = None
+        for a in possible_actions:
+            #based on action a
+            game_after_a = game.copy()
+            game_after_a.choose_destination_cards(pnum, a.args[1], num_keep)
+            
+            #compute value of features given game state after taking action a from current game state
+            evaluated_features = self.get_features(game_after_a, pnum)
+            #TODO: scale features?
+            q_val = sum([f * w for f, w in zip(evaluated_features, self.weights)])
+            if best_val is None or q_val > best_val:
+                best_val = q_val
+                best_action = a
+        
+        return best_action
+    
     def weight_function(zero_edges):
         def fn(u, v, d):
             if (u, v) in zero_edges or (v, u) in zero_edges:
@@ -40,10 +81,7 @@ class ApproximateQLearningAgent(Agent):
             return d.get("weight", 1)
         return fn
     
-    def decide(self, game, pnum):
-        #update turn number
-        self.turn_number += 1
-
+    def get_features(self, game, pnum):
         #update joint graph/remaining destinations storage
         self.jgraph = self.joint_graph(game, pnum)
         self.remaining_dest = self.destinations_not_completed(game, pnum)
@@ -77,30 +115,7 @@ class ApproximateQLearningAgent(Agent):
                     #note: if e['color'] is gray, will just add gray to self_cards_needed. That's OK.
                     self.cards_needed[e['color'].lower()] += e['weight']
 
-        #update longest route by player
-        for pnum in range(len(self.longest_route_by_player)):
-            player_graph = game.player_graph(pnum)
-            longest_by_node = [self.findMaxWeightSumForNode(player_graph, v, []) for v in player_graph.nodes()]
-            self.longest_route_by_player[pnum] = max(longest_by_node) if len(longest_by_node) > 0 else 0
-        
-        #get possible actions from agents
-        possible_actions = [a.decide(game.copy(), pnum) for a in self.agents]
-        best_val = None
-        best_action = None
-        for a in possible_actions:
-            #based on action a
-            game_after_a = game.copy()
-            game_after_a.make_move(a.function, a.args)
-            #compute value of features given game state after taking action a from current game state
-            evaluated_features = [f(game_after_a, pnum) for f in self.features]
-            #TODO: scale features?
-            q_val = [f * w for f, w in zip(evaluated_features, self.weights)]
-            if best_val is None or q_val > best_val:
-                best_val = q_val
-                best_action = a
-        
-        #take action
-        return best_action
+        return [f(game, pnum) for f in self.features]
     
     def feature_num_players(self, game, pnum):
         return game.number_of_players()
@@ -113,9 +128,18 @@ class ApproximateQLearningAgent(Agent):
         return min_trains
     
     def feature_longest_route(self, game, pnum):
-        own_longest_route = self.longest_route_by_player[pnum]
-        overall_longest_route = max(self.longest_route_by_player)
-        return overall_longest_route - own_longest_route + 1 #to avoid zeroing out in vector multiplication
+        overall_max = 0
+        own_max = 0
+        for i in range(self.game.number_of_players()):
+            player_graph = game.player_graph(i)
+            longest_by_node = [self.findMaxWeightSumForNode(player_graph, v, []) for v in player_graph.nodes()]
+            this_max = max(longest_by_node) if len(longest_by_node) > 0 else 0
+            if i == pnum:
+                own_max = this_max
+            if this_max > overall_max:
+                overall_max = this_max
+        
+        return overall_max - own_max + 1 #to avoid zeroing out in vector multiplication
 
     def feature_minimum_possible_dcard_paths(self, game, pnum):
         if len(self.remaining_dest) == 0:
@@ -147,9 +171,6 @@ class ApproximateQLearningAgent(Agent):
                 count += min(self.cards_needed[c], cards_face_up[c])
         
         return count
-
-    def feature_turn_number(self, game, pnum):
-        return self.turn_number
     
     def feature_current_points(self, game, pnum):
         return game.players[pnum].points
@@ -157,28 +178,23 @@ class ApproximateQLearningAgent(Agent):
     def feature_wild_cards_available(self, game, pnum):
         return game.train_cards_face_up["wild"]
     
-    def update(self, game, pnum, action, next_game, reward):
-        #TODO: write function to update weights based on results
-        # Turn-to-turn depends on other players - don't want to lose 10 for taking a good action but losing longest route
-        #need to decide on alpha (learning rate) and discount factor
-        pass
-
-        #get possible actions from agents
-        #PROBLEM: agents use some randomness in deciding their moves!!
-        # possible_actions = [a.decide(game.copy(), pnum) for a in self.agents]
-        # best_val = None
-        # best_action = None
-        # for a in possible_actions:
-        #     #based on action a
-        #     game_after_a = game.copy()
-        #     game_after_a.make_move(a.function, a.args)
-        #     #compute value of features given game state after taking action a from current game state
-        #     evaluated_features = [f(game_after_a, pnum) for f in self.features]
-        #     #TODO: scale features?
-        #     q_val = [f * w for f, w in zip(evaluated_features, self.weights)]
-        #     if best_val is None or q_val > best_val:
-        #         best_val = q_val
-        #         best_action = a
+    def update(self, pnum, game_after_action, game_before_next_turn, reward):
+        #next_game is the result of taking whatever action in state s
+        #ISSUE: others will play between now and then!
+        #SOLUTION: evaluate right before action based on previous action
+        possible_nextgame_actions = [a.decide(game_before_next_turn.copy(), pnum) for a in self.agents]
+        best_future_q = 0
+        for a in possible_nextgame_actions:
+            game_after_nextgame_a = game_before_next_turn.copy()
+            game_after_nextgame_a.make_move(a.function, a.args)
+            future_q = sum([f * w for f, w in zip(self.get_features(game_after_nextgame_a, pnum), self.weights)])
+            if best_future_q < future_q:
+                best_future_q = future_q
+        
+        cur_features = self.get_features(game_after_action, pnum)
+        difference = reward + self.discount * best_future_q - sum([f * w for f, w in zip(cur_features, self.weights)])
+        for i in range(len(self.weights)):
+            self.weights[i] += self.alpha * difference * cur_features[i]
 
     def train_decide(self, state):
         #TODO: write function to decide when training
