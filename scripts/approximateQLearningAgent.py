@@ -7,7 +7,7 @@ from oneStepThinkerAgent import OneStepThinkerAgent
 from pathAgent import PathAgent
 
 #Question: how to handle storing feature weights?
-#   Answer:include training function that only needs to be run once (and stores results with pickle to load in at __init__)
+#   Answer: include training function that only needs to be run once (and stores results with pickle to load in at __init__)
 
 #Glenn: features involving the action - know what action each of the four agents would pick
 #       "this action scores points for me, completes card, claims route, picks useful traincard etc."
@@ -32,7 +32,7 @@ class ApproximateQLearningAgent(Agent):
         self.cards_needed = emptyCardDict()
         self.num_cards_needed = 0
         self.discount = 0.995
-        self.alpha = 0.01
+        self.alpha = 0.0001
     
     def decide(self, game, pnum):        
         #get possible actions from agents
