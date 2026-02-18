@@ -5,6 +5,7 @@ from hungryAgent import HungryAgent
 from longRouteJunkieAgent import LongRouteJunkieAgent
 from oneStepThinkerAgent import OneStepThinkerAgent
 from pathAgent import PathAgent
+import random
 
 #Question: how to handle storing feature weights?
 #   Answer: include training function that only needs to be run once (and stores results with pickle to load in at __init__)
@@ -18,10 +19,20 @@ from pathAgent import PathAgent
 
 class ApproximateQLearningAgent(Agent):
     def __init__(self):
+        #Class variables that should NOT change between training runs
+        
         self.features = [getattr(self, name) for name in self.__class__.__dict__ 
                          if name.startswith("feature_") and callable(getattr(self, name))]
         
         self.weights = [0] * len(self.features)
+        self.discount = 0.995
+        self.alpha = 0.0001
+        self.epsilon = 1
+        self.reinitialize_vars()        
+        
+    def reinitialize_vars(self):
+        #Class variables that SHOULD change between training runs
+
         #List of agents to pick actions from.
         #Each agent will have decide() called on it with this agent's pnum, which should keep their fields updated
         self.agents = [HungryAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent(), PathAgent()]
@@ -31,8 +42,6 @@ class ApproximateQLearningAgent(Agent):
         self.paths_planned = {}
         self.cards_needed = emptyCardDict()
         self.num_cards_needed = 0
-        self.discount = 0.995
-        self.alpha = 0.0001
     
     def decide(self, game, pnum):        
         #get possible actions from agents
@@ -196,8 +205,20 @@ class ApproximateQLearningAgent(Agent):
         for i in range(len(self.weights)):
             self.weights[i] += self.alpha * difference * cur_features[i]
 
-    def train_decide(self, state):
-        #TODO: write function to decide when training
+    def train_decide(self, game, pnum):
         #with probability epsilon, randomly decide between the agents
         #with probabiliity 1-epsilon, just take the real action
-        pass
+        if random.random() < self.epsilon:
+            rand_agent_idx = random.randint(0, len(self.agents) - 1)
+            return self.agents[rand_agent_idx].decide(game, pnum)
+        else:
+            return self.decide(game, pnum)
+    
+    def train_choose_destination_cards(self, moves, game, pnum, num_keep):
+        #with probability epsilon, randomly decide between the agents
+        #with probabiliity 1-epsilon, just take the real action
+        if random.random() < self.epsilon:
+            rand_agent_idx = random.randint(0, len(self.agents) - 1)
+            return self.agents[rand_agent_idx].choose_destination_cards(moves, game, pnum, num_keep)
+        else:
+            return self.choose_destination_cards(moves, game, pnum, num_keep)

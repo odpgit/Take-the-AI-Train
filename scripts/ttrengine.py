@@ -46,7 +46,7 @@ class GameHandler:
 		self.first_player = -1
 		self.total_relative_edges_left = []
 		self.train = True # NOTE: set this to False when not training!!
-		self.aql_idx = 0
+		self.aql_indices = set([0]) # NOTE: set this accordingly!
 	
 	def eval_rewards(self, pnum, move, args):
 		if move == 'chooseDestinationCards':
@@ -133,14 +133,16 @@ class GameHandler:
 					self.total_relative_edges_left.append(numberOfRelativeEdges(self.game.board.graph))
 			
 			cur_player = self.game.current_player
-			if self.train and cur_player == self.aql_idx:
+			if self.train and cur_player in self.aql_indices:
 				if prev_game is not None:
-					self.agents[self.aql_idx].update(self.aql_idx, prev_game, self.game, prev_reward)
+					self.agents[cur_player].update(cur_player, prev_game, self.game, prev_reward)
 				prev_game = self.game.copy()
-				
-			move = self.agents[self.game.current_player].decide(self.game, self.game.current_player)
+				move = self.agents[cur_player].train_decide(self.game, cur_player)
+			else:	
+				move = self.agents[cur_player].decide(self.game, cur_player)
+			
 			try:
-				movelog.append(LogMove(self.game.current_player, move.function, move.args))
+				movelog.append(LogMove(cur_player, move.function, move.args))
 			except:
 				#print 'NO MORE MOVES!!!'
 				f1 = open('disaster' + '.go', 'wb')
@@ -150,7 +152,7 @@ class GameHandler:
 			
 			self.game.make_move(move.function, move.args)
 
-			if self.train and cur_player == self.aql_idx:
+			if self.train and cur_player in self.aql_indices:
 				prev_reward = self.eval_rewards(cur_player, move.function, move.args)
 
 			if move.function == 'drawDestinationCards':
@@ -175,7 +177,7 @@ class GameHandler:
 			f1.close()
 			f2.close()
 
-		#print "Total game length: " + str(time.time() - start)
+		print (f"Total game length in turns: {self.turn_count} and in seconds: {str(time.time() - start)}")
 
 def numberOfRelativeEdges(graph, multi_edges=True):
 	total_relative_edges_left = 0

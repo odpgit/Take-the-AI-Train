@@ -46,6 +46,8 @@ game_object = Game(board=board, point_table=point_table(), destination_deck=dest
 # agents = list of agents that will play
 # filename = name of the file where you want to save the game logs
 gh = GameHandler(game=game_object, agents=[HungryAgent(), PathAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
+gh.train = False
+gh.aql_indices = set() #empty set
 
 # runnum = integer that gets appended to the log filename (useful if you are running multiple games in a loop)
 # save = boolean that chooses to save (True), or not (False), the game logs
