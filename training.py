@@ -9,15 +9,19 @@ from hungryAgent import *
 from oneStepThinkerAgent import *
 from longRouteJunkieAgent import *
 from approximateQLearningAgent import *
+import numpy as np
+import matplotlib.pyplot as plt
 
 board = Board(loadgraphfromfile("gameContent/usa.txt"))
 dest_deck_dict = destinationdeckdict(dest_list=loaddestinationdeckfromfile("gameContent/usa_destinations.txt"), board="usa")
 agent_lst = [ApproximateQLearningAgent(), ApproximateQLearningAgent(), ApproximateQLearningAgent(), ApproximateQLearningAgent()]
+
+train_score_record = [[], [], [], []]
 epsilon_start = 1
 for a in agent_lst:
     a.epsilon = epsilon_start
 
-num_training_sessions = 10000
+num_training_sessions = 100 #10000
 epsilon_target = 0.05
 when_reach_target = 0.65 * num_training_sessions
 
@@ -38,6 +42,36 @@ for game_no in range(num_training_sessions):
     gh.aql_indices = set(range(0, 4))
 
     gh.play(runnum=game_no, save=False)
-    #record points somehow
+    #record points
+    for i in range(len(player_list)):
+        train_score_record[i].append(player_list[i].points)
+
+#test it out!
+test_score_record = []
+for i in range(len(agent_lst)):
+    player_list = [Player(hand=emptyCardDict(), number_of_trains=45, points=0) for i in range(0,4)]
+    game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
+    gh = GameHandler(game=game_object, agents=[agent_lst[i], HungryAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
+    gh.play(runnum=game_no + i + 1, save=False)
+
+    #print results
+    print(f"Scoring Breakdown for agent {i}")
+    gh.game.print_scoresheet()
 
 #record weights somehow
+print("Agent weights")
+for i in range(len(agent_lst)):
+    print(i, agent_lst[i].weights)
+
+#score curve
+train_score_record = [np.array(arr) for arr in train_score_record]
+
+train_x = np.arange(num_training_sessions)
+
+for i in range(len(train_score_record)):
+    plt.plot(train_x, train_score_record)
+    plt.title(f"Agent {i}'s training score progression")
+    plt.show()
+
+#parts of report that can write now
+#picked features

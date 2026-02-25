@@ -33,7 +33,7 @@ class HungryAgent(Agent):
 		for i in range(0, len(game.players)):
 			total_current_points += game.players[i].points
 
-		if self.players_previous_points < total_current_points:
+		if self.players_previous_points < total_current_points or self.colors_needed == {} or self.routes_by_color == {}:
 			x = self.generate_game_plan(self.list_of_cities, joint_graph)
 			self.colors_needed = x[3]
 			self.routes_by_color = x[2]
@@ -82,6 +82,20 @@ class HungryAgent(Agent):
 
 			#print routes_to_take
 			#print "MOVE: " + str(max_route_move)
+			try:
+				assert max_route_move is not None
+			except AssertionError as e:
+				print(f"I am player {pnum}")
+				print(f"r_t_t: {routes_to_take}")
+				print("possible moves")
+				for m in possible_moves:
+					print(m.function, m.args)
+				print("game board edges")
+				print(game.board.graph.edges.data())
+				print("free connections edges")
+				print(free_connections_graph.edges.data())
+				exit(1)
+
 			return max_route_move
 
 		#print '4'
@@ -103,10 +117,12 @@ class HungryAgent(Agent):
 				#print [temp1, temp2] in self.routes_by_color[route[2]]
 
 				if [temp1, temp2] in self.routes_by_color[route[2]] or [temp2, temp1] in self.routes_by_color[route[2]]:
+					assert move is not None, f"{temp1} {temp2}"
 					return move
 
 				if [temp1, temp2] in self.routes_by_color['GRAY'] or [temp2, temp1] in self.routes_by_color['GRAY']:
 					if self.colors_needed[route[2]] <= 0:
+						assert move is not None, f"{temp1} {temp2}"
 						return move
 
 
@@ -314,6 +330,7 @@ class HungryAgent(Agent):
 		min_over_train_requirements = game.players[pnum].number_of_trains
 		best_move = None
 		min_points = None
+		jgraph = self.joint_graph(game, pnum)
 		for m in moves:
 			destinations = list(self.list_of_cities)
 			temp = []
@@ -325,13 +342,15 @@ class HungryAgent(Agent):
 				min_points = points
 				min_move = m
 			destinations = list(set(destinations))
-			x = self.generate_game_plan(destinations, self.joint_graph(game, pnum))
+			x = self.generate_game_plan(destinations, jgraph)
 			#if x[0] == None or x[1] == None:
 			#	fitness = 0
 			#else:
 			fitness = 0
-			if x[0] != None:
+			if x[0] is not None:
 				fitness = float((points + x[0])) / float(x[1])
+			if x[1] is None:
+				continue
 			if x[1] <= game.players[pnum].number_of_trains - 5:
 				if fitness > best_ratio:
 					best_ratio = fitness
@@ -344,12 +363,13 @@ class HungryAgent(Agent):
 					best_move = m
 					croutes = x[2]
 					cneeded = x[3]
-		if best_move == None:
+		if best_move is None:
 			return min_move
 		
-		self.colors_needed = cneeded
-		self.routes_by_color = croutes
-		self.current_threshold = x[1]
+		if x[1] is not None:
+			self.colors_needed = cneeded
+			self.routes_by_color = croutes
+			self.current_threshold = x[1]
 		for i in range(0, len(game.players)):
 			if i != pnum:
 				self.players_previous_points += game.players[i].points

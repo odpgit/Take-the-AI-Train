@@ -33,24 +33,25 @@ class Agent(ABC):
 	def free_routes_graph(self, pnum, graph, number_of_players, min_weight_edge=0):
 		G = nx.MultiGraph()
 		visited_nodes = []
-		
+		assert len(graph) > 0	
 		for node1 in graph:
 			for node2 in graph[node1]:
 				if node2 not in visited_nodes:
 					locked = False
-					for edge in graph[node1][node2]:
+					conn_obj = graph[node1][node2]
+					for edge in conn_obj:
 						if number_of_players < 4:  #################### CHECK THIS FOR SWITZERLAND!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-							if graph[node1][node2][edge]['owner'] != -1:
+							if conn_obj[edge]['owner'] != -1:
 								locked = True
 						else:
 							#if you already own one side of a double route, can't claim other
-							if graph[node1][node2][edge]['owner'] == pnum:
+							if conn_obj[edge]['owner'] == pnum:
 								locked = True
 
 					if not locked:
-						for edge in graph[node1][node2]:
-							if graph[node1][node2][edge]['owner'] == -1 and graph[node1][node2][edge]['weight'] >= min_weight_edge:
-								G.add_edge(node1, node2, weight=graph[node1][node2][edge]['weight'], color=graph[node1][node2][edge]['color'], underground=graph[node1][node2][edge]['underground'], ferries=graph[node1][node2][edge]['ferries'], owner=-1)
+						for edge in conn_obj:
+							if conn_obj[edge]['owner'] == -1 and conn_obj[edge]['weight'] >= min_weight_edge:
+								G.add_edge(node1, node2, weight=conn_obj[edge]['weight'], color=conn_obj[edge]['color'], underground=conn_obj[edge]['underground'], ferries=conn_obj[edge]['ferries'], owner=-1)
 
 			visited_nodes.append(node1)
 		

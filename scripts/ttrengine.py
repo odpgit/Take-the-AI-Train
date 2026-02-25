@@ -8,6 +8,7 @@ import time
 import copyreg
 import types
 from agent import Agent
+import copy
 
 def _pickle_method(m):
 	if m.im_self is None:
@@ -57,22 +58,18 @@ class GameHandler:
 				reward -= c.points
 			return reward
 		elif move == 'claimRoute':
-			#args: city1, city2, color
+			#args: city1, city2, color (specifically, the color used to claim the route)
 			#check if route claimed successfully
 			route = None
-			if args[2] != 'gray':
-				route = self.game.board.get_connection(args[0], args[1], args[2])
-				if route['owner'] != pnum:
-					#route claim unsuccessful
-					return 0
-			else:
-				for c in self.game.board.get_connection(args[0], args[1]):
-					if c['owner'] == pnum:
-						route = c
-						break 
-				if route is None:
-					#route claim unsuccessful
-					return 0
+			connections = self.game.board.get_connection(args[0], args[1])
+			for c in connections:
+				conn_dict = connections[c]
+				if conn_dict['owner'] == pnum and (conn_dict['color'] == 'GRAY' or conn_dict['color'] == args[2]):
+					route = conn_dict
+					break
+			if route is None or route['owner'] != pnum:
+				#route claim unsuccessful
+				return 0
 			
 			reward = 0
 
@@ -81,30 +78,35 @@ class GameHandler:
 
 			#(2) score points if this route caused previously-incomplete destination card(s) to be completed
 			player = self.game.players[pnum]
-			player_graph = self.player_graph(pnum)
+			player_graph = self.game.player_graph(pnum)
 			for card in player.hand_destination_cards:
 				if card not in player.completed_destination_cards:
-					if nx.has_path(player_graph, card.destinations[0], card.destinations[1]):
-						player.completed_destination_cards.add(card)
-						reward += 2 * card.points
+					if card.destinations[0] in player_graph.nodes() and card.destinations[1] in player_graph.nodes():
+						if nx.has_path(player_graph, card.destinations[0], card.destinations[1]):
+							player.completed_destination_cards.add(card)
+							reward += 2 * card.points
 
 			return reward
 		elif move == 'drawTrainCard':
 			return 0
 		
-	def choose_destination_cards(self, pnum, num_keep):
+	def generate_destination_card_choices(self, pnum, num_keep):
 		#chooses destination cards for a specified player
 		#assumes that they have already been drawn into player hand - just need to know which to keep
 
 		#generate moves
 		pmoves = []
 		dest_card_set = self.game.list_pending_destination_cards(pnum)
+		assert len(dest_card_set) == 3, f"dest card set len is {len(dest_card_set)}"
 		for x in range(num_keep, len(dest_card_set) + 1):
 			comb = itertools.combinations(dest_card_set, x)
 			for cardset in comb:
 				pmoves.append(Move('chooseDestinationCards', [pnum, list(cardset)]))
 		
-		return self.agents[pnum].choose_destination_cards(pmoves, self.game, pnum, num_keep)
+		assert len(pmoves) > 0
+		for move in pmoves:
+			assert move.function == 'chooseDestinationCards'
+		return pmoves
 
 	def play(self, runnum, save=False):
 		movelog = []
@@ -113,19 +115,35 @@ class GameHandler:
 		self.game.setup()
 
 		#Choose destination card at game start
+		orig_game = self.game.copy()
+		num_keep_start = self.game.destination_deck_draw_rules[1]
 		for i in range(self.game.number_of_players):
-			chosen_move = self.choose_destination_cards(i, self.game.destination_deck_draw_rules[1])
-			self.game.choose_destination_cards(i, chosen_move.args[1], self.game.destination_deck_draw_rules[1])
+			possible_moves = self.generate_destination_card_choices(i, num_keep_start)
+			
+			if self.train and i in self.aql_indices:
+				chosen_move = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_start)
+			else:
+				chosen_move = self.agents[i].choose_destination_cards(possible_moves, self.game, i, num_keep_start)
+			
+			self.game.choose_destination_cards(i, chosen_move.args[1], num_keep_start)
+			if self.train and i in self.aql_indices:
+				reward = self.eval_rewards(i, chosen_move.function, chosen_move.args)
+				self.agents[i].update(i, orig_game, self.game, reward)
 		
 		self.first_player = self.game.current_player
 
 		#All turns
 		if self.train:
-			prev_game = None
-			prev_reward = 0
+			prev_games = {}
+			prev_rewards = {}
+			for idx in self.aql_indices:
+				prev_games[idx] = None
+				prev_rewards[idx] = 0
 
+		move_being_assessed = {}
+		num_keep_game = self.game.destination_deck_draw_rules[3]
 		while self.game.game_over == False:
-			#print("Current Player: " + str(self.game.current_player) + ", " + str(self.game.players[self.game.current_player].number_of_trains)) + ', ' + str(self.game.players[self.game.current_player].points)
+			#print("Current player", self.game.current_player)
 			if self.last_player != self.game.current_player:
 				self.total_move_count.append(len(self.game.get_possible_moves(self.game.current_player)))
 				self.last_player = self.game.current_player
@@ -134,9 +152,10 @@ class GameHandler:
 			
 			cur_player = self.game.current_player
 			if self.train and cur_player in self.aql_indices:
-				if prev_game is not None:
-					self.agents[cur_player].update(cur_player, prev_game, self.game, prev_reward)
-				prev_game = self.game.copy()
+				if prev_games[cur_player] is not None:
+					#print("Updating with reward", prev_rewards[cur_player], "on turn", self.turn_count, "with current player", cur_player, "and last move", move_being_assessed[cur_player].function, move_being_assessed[cur_player].args)
+					self.agents[cur_player].update(cur_player, prev_games[cur_player], self.game, prev_rewards[cur_player])
+				prev_games[cur_player] = self.game.copy()
 				move = self.agents[cur_player].train_decide(self.game, cur_player)
 			else:	
 				move = self.agents[cur_player].decide(self.game, cur_player)
@@ -152,19 +171,32 @@ class GameHandler:
 			
 			self.game.make_move(move.function, move.args)
 
-			if self.train and cur_player in self.aql_indices:
-				prev_reward = self.eval_rewards(cur_player, move.function, move.args)
-
 			if move.function == 'drawDestinationCards':
 				#get move chosen for this player
-				chosen_move = self.choose_destination_cards(cur_player, self.game.destination_deck_draw_rules[3])
+				if self.train and i in self.aql_indices:
+					chosen_move = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_game)
+				else:
+					chosen_move = self.agents[i].choose_destination_cards(possible_moves, self.game, i, num_keep_game)
+				
 				#execute move in game
-				self.game.choose_destination_cards(cur_player, chosen_move.args[1], self.game.destination_deck_draw_rules[3])
+				self.game.choose_destination_cards(cur_player, chosen_move.args[1], num_keep_game)
+				
+				#only evaluate rewards after destination cards chosen
+				if self.train and cur_player in self.aql_indices:
+					prev_rewards[cur_player] = self.eval_rewards(cur_player, chosen_move.function, chosen_move.args)
+					move_being_assessed[cur_player] = chosen_move
+			elif self.train and cur_player in self.aql_indices:
+				#reward evaluation for turns other than choosing destination cards
+				prev_rewards[cur_player] = self.eval_rewards(cur_player, move.function, move.args)
+				move_being_assessed[cur_player] = move
 
 			#Only increment turn count if current player changed
 			#Matters b/c drawing 1 of 2 cards will count as a move for make_move but not change current player
 			if cur_player != self.game.current_player:
+				#print("incrementing turn count because current player", cur_player, "just did", move.function, move.args)
 				self.turn_count += 1
+			#else:
+				#print("not incrementing turn count because current player", cur_player, "just did", move.function, move.args)
 
 		#for i in range(0, self.game.number_of_players):
 		#	print("Player " + str(i+1) + ": " + str(self.game.players[i].points))
@@ -276,11 +308,11 @@ class Player:
 		self.completed_destination_cards = set()
 
 	def copy(self):
-		p = Player(self.hand.copy(), self.number_of_trains, self.points)
+		p = Player(copy.deepcopy(self.hand), self.number_of_trains, self.points)
 		#p.hand_destination_cards = copy.copy(self.hand_destination_cards)
-		p.hand_destination_cards = self.hand_destination_cards[:]	
+		p.hand_destination_cards = copy.deepcopy(self.hand_destination_cards)
 		p.drawing_train_cards = self.drawing_train_cards
-		p.graph = nx.Graph(self.graph)
+		p.graph = copy.deepcopy(self.graph)
 		return p
 
 	def print_destination_cards(self):
@@ -307,8 +339,8 @@ class CardManager:
 	def copy(self):
 		#c = CardManager(copy.copy(self.deck))
 		#c.discard_pile = copy.copy(self.discard_pile)
-		c = CardManager(self.deck.copy())
-		c.discard_pile = self.discard_pile.copy()
+		c = CardManager(copy.deepcopy(self.deck))
+		c.discard_pile = copy.deepcopy(self.discard_pile)
 		return c
 
 	#returns a randomly picked card from the list (deck)
@@ -348,7 +380,7 @@ class Board:
 
 	def copy(self):
 		#b = Board(copy.deepcopy(self.graph))
-		b = Board(nx.MultiGraph(self.graph))
+		b = Board(copy.deepcopy(self.graph))
 		return b
 
 	#returns a route (edge) of a specific color that connect two cities
@@ -392,7 +424,11 @@ class Board:
 
 		if not locked:
 			if color is None:
-				return [c['owner'] == -1 for c in connections]
+				ret = []
+				for c in connections:
+					if connections[c]['owner'] == -1:
+						ret.append(connections[c])
+				return ret
 			for c in connections:
 				if (connections[c]['color'] == color or connections[c]['color'] == "GRAY") and connections[c]['owner'] == -1:
 					return connections[c]
@@ -482,7 +518,7 @@ class Game:
 		g.destination_deck = self.destination_deck.copy()
 		g.train_deck = self.train_deck.copy()
 		g.last_turn_player = self.last_turn_player
-		g.train_cards_face_up = self.train_cards_face_up.copy()
+		g.train_cards_face_up = copy.deepcopy(self.train_cards_face_up)
 		#g.number_of_train_cards_first_turn = self.number_of_train_cards_first_turn
 		#g.number_of_face_up_train_cards = self.number_of_face_up_train_cards
 		#g.limit_of_face_up_wild_cards = self.limit_of_face_up_wild_cards
@@ -516,7 +552,8 @@ class Game:
 				if "destination" not in self.players[i].hand:
 					self.players[i].hand["destination"] = []
 				self.players[i].hand["destination"].append(self.draw_card(self.destination_deck))
-
+			dlen = len(self.players[i].hand["destination"])
+			assert dlen == 3, f"player should have 3 dcards at setup but has {dlen}"
 		self.current_player = random.choice([x for x in range(0, self.number_of_players)])
 		self.who_went_first = self.current_player
 
@@ -787,7 +824,7 @@ class Game:
 			self.players[self.current_player].hand['destination'] = []
 		for i in range(0, x):
 			self.players[self.current_player].hand['destination'].append(self.draw_card(self.destination_deck))
-
+		
 		return True
 
 	#makes the move of drawing new train cards
@@ -1107,6 +1144,10 @@ class Game:
 			for (city1, city2) in edges:
 				if (city1, city2) not in visited:
 					visited.append((city1, city2))
+
+					#Can never claim route between two cities if you already have claimed a route between the two cities
+					if self.player_graph(player_index).has_edge(city1, city2):
+						continue
 
 					special_nordic_route = False				
 					if self.nordic_countries_variant:

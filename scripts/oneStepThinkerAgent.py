@@ -16,6 +16,7 @@ class OneStepThinkerAgent(Agent):
 		claim_route_moves = []
 		draw_train_card_moves = []
 		
+		move_draw_dest = None
 		for move in possible_moves:
 			if move.function == 'drawDestinationCards':
 				move_draw_dest = move
@@ -35,7 +36,7 @@ class OneStepThinkerAgent(Agent):
 			self.players_previous_points = total_current_points
 
 		if self.current_objective_color != None:
-			if self.current_objective_color == 'drawDestination':
+			if self.current_objective_color == 'drawDestination' and move_draw_dest is not None:
 				self.players_previous_points = -1
 				return move_draw_dest
 			
@@ -169,7 +170,7 @@ class OneStepThinkerAgent(Agent):
 				#		return move
 				return ['drawDestination', 'drawDestination', 'drawDestination']
 			else:
-				result = self.chooseMaxRoute(game, pnum);
+				result = self.chooseMaxRoute(game, pnum)
 		
 		return result
 
