@@ -46,7 +46,11 @@ class ApproximateQLearningAgent(Agent):
     
     def decide(self, game, pnum):        
         #get possible actions from agents
-        possible_actions = [a.decide(game.copy(), pnum) for a in self.agents]
+        overall_possible_actions = game.get_possible_moves(pnum)
+        assert len(overall_possible_actions) > 0, "No moves left to make"
+        possible_actions = []
+        for a in self.agents:
+            possible_actions.append(a.decide(game.copy(), pnum))
         best_val = None
         best_action = None
         for (i, act) in enumerate(possible_actions):
@@ -67,7 +71,12 @@ class ApproximateQLearningAgent(Agent):
     
     def choose_destination_cards(self, moves, game, pnum, num_keep):
         #get possible actions from agents
-        possible_actions = [a.choose_destination_cards(moves.copy(), game.copy(), pnum, num_keep) for a in self.agents]
+        possible_actions = []
+        for a in self.agents:
+            m_copy = []
+            for m in moves:
+                m_copy.append(m.copy())
+            possible_actions.append(a.choose_destination_cards(m_copy, game.copy(), pnum, num_keep))
         best_val = None
         best_action = None
         for (i, act) in enumerate(possible_actions):
@@ -140,13 +149,9 @@ class ApproximateQLearningAgent(Agent):
         return game.number_of_players
     
     def feature_minimum_trains_left(self, game, pnum):
-        min_trains = float('inf')
-        for p in game.players:
-            if p.number_of_trains < min_trains:
-                min_trains = p.number_of_trains
-        return min_trains
+        return min([p.number_of_trains for p in game.players])
     
-    def feature_longest_route(self, game, pnum):
+    def feature_longest_path(self, game, pnum):
         overall_max = 0
         own_max = 0
         for i in range(game.number_of_players):
@@ -203,7 +208,6 @@ class ApproximateQLearningAgent(Agent):
         return game.train_cards_face_up["wild"]
     
     def update(self, pnum, game_after_action, game_before_next_turn, reward):
-        #next_game is the result of taking whatever action in state s
         #ISSUE: others will play between now and then!
         #SOLUTION: evaluate right before action based on previous action
         try:

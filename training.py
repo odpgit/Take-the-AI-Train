@@ -52,10 +52,11 @@ for i in range(len(agent_lst)):
     player_list = [Player(hand=emptyCardDict(), number_of_trains=45, points=0) for i in range(0,4)]
     game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
     gh = GameHandler(game=game_object, agents=[agent_lst[i], HungryAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
+    gh.train = False
     gh.play(runnum=game_no + i + 1, save=False)
 
     #print results
-    print(f"Scoring Breakdown for agent {i}")
+    print(f"Scoring Breakdown for agent {i} (player 0)")
     gh.game.print_scoresheet()
 
 #record weights somehow
@@ -69,7 +70,7 @@ train_score_record = [np.array(arr) for arr in train_score_record]
 train_x = np.arange(num_training_sessions)
 
 for i in range(len(train_score_record)):
-    plt.plot(train_x, train_score_record)
+    plt.plot(train_x, train_score_record[i])
     plt.title(f"Agent {i}'s training score progression")
     plt.show()
 

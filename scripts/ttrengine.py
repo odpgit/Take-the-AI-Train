@@ -132,16 +132,16 @@ class GameHandler:
 		
 		self.first_player = self.game.current_player
 
-		#All turns
+		#Indexed by player, for reward updating
 		if self.train:
 			prev_games = {}
-			prev_rewards = {}
+			prev_moves = {}
 			for idx in self.aql_indices:
 				prev_games[idx] = None
-				prev_rewards[idx] = 0
+				prev_moves[idx] = None
 
-		move_being_assessed = {}
 		num_keep_game = self.game.destination_deck_draw_rules[3]
+		#All turns
 		while self.game.game_over == False:
 			#print("Current player", self.game.current_player)
 			if self.last_player != self.game.current_player:
@@ -153,8 +153,9 @@ class GameHandler:
 			cur_player = self.game.current_player
 			if self.train and cur_player in self.aql_indices:
 				if prev_games[cur_player] is not None:
-					#print("Updating with reward", prev_rewards[cur_player], "on turn", self.turn_count, "with current player", cur_player, "and last move", move_being_assessed[cur_player].function, move_being_assessed[cur_player].args)
-					self.agents[cur_player].update(cur_player, prev_games[cur_player], self.game, prev_rewards[cur_player])
+					#eval_rewards uses current game state, which is right
+					reward = self.eval_rewards(cur_player, prev_moves[cur_player].function, prev_moves[cur_player].args)
+					self.agents[cur_player].update(cur_player, prev_games[cur_player], self.game, reward)
 				prev_games[cur_player] = self.game.copy()
 				move = self.agents[cur_player].train_decide(self.game, cur_player)
 			else:	
@@ -181,14 +182,10 @@ class GameHandler:
 				#execute move in game
 				self.game.choose_destination_cards(cur_player, chosen_move.args[1], num_keep_game)
 				
-				#only evaluate rewards after destination cards chosen
 				if self.train and cur_player in self.aql_indices:
-					prev_rewards[cur_player] = self.eval_rewards(cur_player, chosen_move.function, chosen_move.args)
-					move_being_assessed[cur_player] = chosen_move
+					prev_moves[cur_player] = chosen_move.copy()
 			elif self.train and cur_player in self.aql_indices:
-				#reward evaluation for turns other than choosing destination cards
-				prev_rewards[cur_player] = self.eval_rewards(cur_player, move.function, move.args)
-				move_being_assessed[cur_player] = move
+				prev_moves[cur_player] = move.copy()
 
 			#Only increment turn count if current player changed
 			#Matters b/c drawing 1 of 2 cards will count as a move for make_move but not change current player
@@ -324,6 +321,10 @@ class Move:
 	def __init__(self, fref, args):
 		self.function = fref
 		self.args = args
+	
+	def copy(self):
+		m = Move(self.function, copy.deepcopy(self.args))
+		return m
 
 
 #class to encapsulate decks (train card deck and destination deck)
