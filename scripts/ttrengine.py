@@ -121,14 +121,14 @@ class GameHandler:
 			possible_moves = self.generate_destination_card_choices(i, num_keep_start)
 			
 			if self.train and i in self.aql_indices:
-				chosen_move = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_start)
+				chosen_move, chosen_agent = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_start)
 			else:
 				chosen_move = self.agents[i].choose_destination_cards(possible_moves, self.game, i, num_keep_start)
 			
 			self.game.choose_destination_cards(i, chosen_move.args[1], num_keep_start)
 			if self.train and i in self.aql_indices:
 				reward = self.eval_rewards(i, chosen_move.function, chosen_move.args)
-				self.agents[i].update(i, orig_game, self.game, reward)
+				self.agents[i].update(i, chosen_agent, orig_game, self.game, reward)
 		
 		self.first_player = self.game.current_player
 
@@ -136,9 +136,11 @@ class GameHandler:
 		if self.train:
 			prev_games = {}
 			prev_moves = {}
+			prev_agents = {}
 			for idx in self.aql_indices:
 				prev_games[idx] = None
 				prev_moves[idx] = None
+				prev_agents[idx] = None
 
 		num_keep_game = self.game.destination_deck_draw_rules[3]
 		#All turns
@@ -152,12 +154,18 @@ class GameHandler:
 			
 			cur_player = self.game.current_player
 			if self.train and cur_player in self.aql_indices:
+
+				#Evaluate rewards from previous move taken, if this isn't the first move
 				if prev_games[cur_player] is not None:
 					#eval_rewards uses current game state, which is right
 					reward = self.eval_rewards(cur_player, prev_moves[cur_player].function, prev_moves[cur_player].args)
-					self.agents[cur_player].update(cur_player, prev_games[cur_player], self.game, reward)
+					self.agents[cur_player].update(cur_player, prev_agents[cur_player], prev_games[cur_player], self.game, reward)
+				
+				#Decide which move to take and update states for next reward update
 				prev_games[cur_player] = self.game.copy()
-				move = self.agents[cur_player].train_decide(self.game, cur_player)
+				move, agent = self.agents[cur_player].train_decide(self.game, cur_player)
+				prev_moves[cur_player] = move.copy()
+				prev_agents[cur_player] = agent
 			else:	
 				move = self.agents[cur_player].decide(self.game, cur_player)
 			
@@ -175,7 +183,7 @@ class GameHandler:
 			if move.function == 'drawDestinationCards':
 				#get move chosen for this player
 				if self.train and i in self.aql_indices:
-					chosen_move = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_game)
+					chosen_move, chosen_agent = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_game)
 				else:
 					chosen_move = self.agents[i].choose_destination_cards(possible_moves, self.game, i, num_keep_game)
 				
@@ -183,17 +191,14 @@ class GameHandler:
 				self.game.choose_destination_cards(cur_player, chosen_move.args[1], num_keep_game)
 				
 				if self.train and cur_player in self.aql_indices:
+					#Override prev_moves and prev_agents, since it was previously set for drawDestinationCards move
 					prev_moves[cur_player] = chosen_move.copy()
-			elif self.train and cur_player in self.aql_indices:
-				prev_moves[cur_player] = move.copy()
+					prev_agents[cur_player] = chosen_agent				
 
 			#Only increment turn count if current player changed
 			#Matters b/c drawing 1 of 2 cards will count as a move for make_move but not change current player
 			if cur_player != self.game.current_player:
-				#print("incrementing turn count because current player", cur_player, "just did", move.function, move.args)
 				self.turn_count += 1
-			#else:
-				#print("not incrementing turn count because current player", cur_player, "just did", move.function, move.args)
 
 		#for i in range(0, self.game.number_of_players):
 		#	print("Player " + str(i+1) + ": " + str(self.game.players[i].points))
@@ -303,6 +308,9 @@ class Player:
 		self.graph = nx.Graph()
 		self.drawing_train_cards = False
 		self.completed_destination_cards = set()
+		#Values estimated; roughly 3/4 of each deck would be depleted if each player held that many (assuming no complete destination cards)
+		self.max_incomplete_destination_cards = 6
+		self.max_train_car_cards = 20
 
 	def copy(self):
 		p = Player(copy.deepcopy(self.hand), self.number_of_trains, self.points)
@@ -315,6 +323,12 @@ class Player:
 	def print_destination_cards(self):
 		for card in self.hand_destination_cards:
 			print(card)
+	
+	def can_draw_destination_cards(self):
+		return len(self.hand_destination_cards) - len(self.completed_destination_cards) < self.max_incomplete_destination_cards
+	
+	def can_draw_train_car_cards(self):
+		return len(self.hand) - len(self.hand["destination"]) < self.max_train_car_cards
 
 #Data structure to store move data
 class Move:
@@ -799,6 +813,13 @@ class Game:
 						self.players[self.current_player].points = self.players[self.current_player].points + (edge['mountain'] * 2)
 
 					self.players[self.current_player].graph.add_edge(city1, city2, weight=edge['weight'])
+
+					cur_player_obj = self.players[self.current_player]
+					for card in cur_player_obj.hand_destination_cards:
+						if card not in cur_player_obj.completed_destination_cards:
+							if card.destinations[0] in cur_player_obj.graph.nodes() and card.destinations[1] in cur_player_obj.graph.nodes():
+								if nx.has_path(cur_player_obj.graph, card.destinations[0], card.destinations[1]):
+									cur_player_obj.completed_destination_cards.add(card)
 			else:
 				return False
 
@@ -1128,6 +1149,7 @@ class Game:
 	def get_possible_moves(self, player_index):
 		pmoves = []
 		if self.players[player_index].drawing_train_cards == True and sum(self.train_deck.deck.values()) > 0:
+			#always draw another train car card if already drew one this turn
 			pmoves.append(Move('drawTrainCard', 'top'))
 			for card in set(self.train_cards_face_up):
 				if (self.switzerland_variant or self.nordic_countries_variant) and self.train_cards_face_up[card] > 0:
@@ -1164,13 +1186,13 @@ class Game:
 								if self.players[player_index].number_of_trains >= edge['weight'] + edge['mountain']:
 									pmoves.append(Move('claimRoute', [city1, city2, color]))
 								#pmoves.append(Move(self.move_claimRoute, [city1, city2, color]))
-			if sum(self.destination_deck.deck.values()) > 0:
+			if sum(self.destination_deck.deck.values()) > 0 and self.players[player_index].can_draw_destination_cards():
 				pmoves.append(Move('drawDestinationCards',[]))
 				#pmoves.append(Move(self.move_drawDestinationCards,[]))
-			if sum(self.train_deck.deck.values()) > 0:
+			if sum(self.train_deck.deck.values()) > 0 and self.players[player_index].can_draw_train_car_cards():
 				pmoves.append(Move('drawTrainCard', 'top'))
 				#pmoves.append(Move(self.move_drawTrainCard, 'top'))
-			if sum(self.train_cards_face_up.values()) > 0:
+			if sum(self.train_cards_face_up.values()) > 0 and self.players[player_index].can_draw_train_car_cards():
 				for card in set(self.train_cards_face_up):
 					if self.train_cards_face_up[card] > 0:
 						pmoves.append(Move('drawTrainCard', card))

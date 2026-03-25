@@ -11,7 +11,7 @@ class PathAgent(Agent):
 
 	def decide(self, game, pnum):
 		possible_moves = game.get_possible_moves(pnum)
-		assert len(possible_moves) > 0, f"No moves left to make because train deck {sum(game.train_deck.deck.values())} destination deck {sum(game.destination_deck.deck.values())}"
+		assert len(possible_moves) > 0, f"No moves left to make because train deck {sum(game.train_deck.deck.values())} train deck discard {sum(game.train_deck.discard_pile.values())} destination deck {sum(game.destination_deck.deck.values())}"
 		
 		if len(possible_moves) == 0:
 			f1 = open('disaster' + '.go', 'wb')

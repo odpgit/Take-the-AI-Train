@@ -1,5 +1,6 @@
 import sys
 sys.path.insert(0, 'scripts/')
+import io
 
 from loadDestinationDeck import *
 from loadMap import *
@@ -21,7 +22,7 @@ epsilon_start = 1
 for a in agent_lst:
     a.epsilon = epsilon_start
 
-num_training_sessions = 100 #10000
+num_training_sessions = 300 #10000
 epsilon_target = 0.05
 when_reach_target = 0.65 * num_training_sessions
 
@@ -58,6 +59,15 @@ for i in range(len(agent_lst)):
     #print results
     print(f"Scoring Breakdown for agent {i} (player 0)")
     gh.game.print_scoresheet()
+    #log results
+    with open('score_log.txt', 'a') as f:
+        original_stdout = sys.stdout
+        try:
+            sys.stdout = f
+            print(f"Scoring Breakdown for agent {i} (player 0)")
+            gh.game.print_scoresheet()
+        finally:
+            sys.stdout = original_stdout
 
 #record weights somehow
 print("Agent weights")
@@ -70,9 +80,10 @@ train_score_record = [np.array(arr) for arr in train_score_record]
 train_x = np.arange(num_training_sessions)
 
 for i in range(len(train_score_record)):
+    plt.clf()
     plt.plot(train_x, train_score_record[i])
     plt.title(f"Agent {i}'s training score progression")
-    plt.show()
+    plt.savefig(f"Agent {i} training score progression.png")
 
 #parts of report that can write now
 #picked features
