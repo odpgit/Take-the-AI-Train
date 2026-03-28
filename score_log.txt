@@ -1,3 +1,4 @@
+-----MARCH 24 (300)-------
 Scoring Breakdown for agent 0 (player 0)
 (1): Player 1, scoring 152 points
 (2): Player 3, scoring 91 points
@@ -18,3 +19,30 @@ Scoring Breakdown for agent 3 (player 0)
 (2): Player 0, scoring 88 points
 (3): Player 3, scoring 86 points
 (4): Player 1, scoring 50 points
+-----MARCH 25 (1000)-------
+Scoring Breakdown for agent 0 (player 0)
+(1): Player 3, scoring 123 points
+(2): Player 2, scoring 75 points
+(3): Player 1, scoring 58 points
+(4): Player 0, scoring 48 points
+Scoring Breakdown for agent 1 (player 0)
+(1): Player 1, scoring 124 points
+(2): Player 0, scoring 104 points
+(3): Player 3, scoring 90 points
+(4): Player 2, scoring 75 points
+Scoring Breakdown for agent 2 (player 0)
+(1): Player 0, scoring 99 points
+(2): Player 3, scoring 83 points
+(3): Player 2, scoring 74 points
+(4): Player 1, scoring 38 points
+Scoring Breakdown for agent 3 (player 0)
+(1): Player 0, scoring 118 points
+(2): Player 3, scoring 69 points
+(3): Player 1, scoring 50 points
+(4): Player 2, scoring 48 points
+-----MARCH 25 (no selfplay)-------
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 122 points
+(2): Player 2, scoring 101 points
+(3): Player 3, scoring 73 points
+(4): Player 0, scoring 46 points

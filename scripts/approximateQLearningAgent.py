@@ -121,6 +121,11 @@ class ApproximateQLearningAgent(Agent):
             print(f"face up {game_before_next_turn.train_cards_face_up}")
             print(f"train deck {sum(game_before_next_turn.train_deck.deck.values())}")
             print(f"destination deck {sum(game_before_next_turn.destination_deck.deck.values())}")
+            print("hands")
+            for (i, p) in enumerate(game_before_next_turn.players):
+                print("Player", i)
+                print(p.hand)
+                print(p.hand_destination_cards)
             exit(1)
 
         possible_nextgame_actions = [(a, a.decide(game_before_next_turn.copy(), pnum)) for a in self.agents]

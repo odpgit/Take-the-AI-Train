@@ -22,7 +22,7 @@ epsilon_start = 1
 for a in agent_lst:
     a.epsilon = epsilon_start
 
-num_training_sessions = 300 #10000
+num_training_sessions = 1000 #10000
 epsilon_target = 0.05
 when_reach_target = 0.65 * num_training_sessions
 
@@ -84,6 +84,3 @@ for i in range(len(train_score_record)):
     plt.plot(train_x, train_score_record[i])
     plt.title(f"Agent {i}'s training score progression")
     plt.savefig(f"Agent {i} training score progression.png")
-
-#parts of report that can write now
-#picked features
