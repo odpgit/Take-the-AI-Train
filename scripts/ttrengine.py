@@ -4,7 +4,6 @@ import networkx as nx
 import itertools
 import random
 import pickle
-import time
 import copyreg
 import types
 from agent import Agent
@@ -48,6 +47,7 @@ class GameHandler:
 		self.total_relative_edges_left = []
 		self.train = True # NOTE: set this to False when not training!!
 		self.aql_indices = set([0]) # NOTE: set this accordingly!
+		self.run_failure = False
 	
 	def eval_rewards(self, pnum, move, args):
 		if move == 'chooseDestinationCards':
@@ -110,7 +110,6 @@ class GameHandler:
 
 	def play(self, runnum, save=False):
 		movelog = []
-		start = time.time()
 		
 		self.game.setup()
 
@@ -160,15 +159,22 @@ class GameHandler:
 					#eval_rewards uses current game state, which is right
 					reward = self.eval_rewards(cur_player, prev_moves[cur_player].function, prev_moves[cur_player].args)
 					self.agents[cur_player].update(cur_player, prev_agents[cur_player], prev_games[cur_player], self.game, reward)
+					if self.agents[cur_player].run_failure:
+						self.run_failure = True
+						return
 				
 				#Decide which move to take and update states for next reward update
 				prev_games[cur_player] = self.game.copy()
 				move, agent = self.agents[cur_player].train_decide(self.game, cur_player)
 				prev_moves[cur_player] = move.copy()
 				prev_agents[cur_player] = agent
+
+				if self.agents[cur_player].run_failure:
+					self.run_failure = True
+					return
 			else:	
 				move = self.agents[cur_player].decide(self.game, cur_player)
-			
+
 			try:
 				movelog.append(LogMove(cur_player, move.function, move.args))
 			except:
@@ -210,8 +216,6 @@ class GameHandler:
 			pickle.dump(movelog, f2)
 			f1.close()
 			f2.close()
-
-		print (f"Total game length in turns: {self.turn_count} and in seconds: {str(time.time() - start)}")
 
 def numberOfRelativeEdges(graph, multi_edges=True):
 	total_relative_edges_left = 0
@@ -394,7 +398,6 @@ class Board:
 		self.graph = board_graph
 
 	def copy(self):
-		#b = Board(copy.deepcopy(self.graph))
 		b = Board(copy.deepcopy(self.graph))
 		return b
 

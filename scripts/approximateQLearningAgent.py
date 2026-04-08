@@ -56,11 +56,18 @@ class ApproximateQLearningAgent(Agent):
         self.cards_needed = emptyCardDict()
         self.num_cards_needed = 0
         self.last_chosen_agent = None
+        self.run_failure = False
     
     def decide(self, game, pnum):        
         #get possible actions from agents
         overall_possible_actions = game.get_possible_moves(pnum)
-        assert len(overall_possible_actions) > 0, "No moves left to make"
+        try:
+            assert len(overall_possible_actions) > 0
+        except AssertionError as e:
+            print("AQL: no moves left to make")
+            self.run_failure = True
+            return
+        
         possible_actions = []
         for a in self.agents:
             possible_actions.append((a, a.decide(game.copy(), pnum)))
@@ -115,20 +122,26 @@ class ApproximateQLearningAgent(Agent):
     def update(self, pnum, chosen_agent, game_after_action, game_before_next_turn, reward):
         #ISSUE: others will play between now and then!
         #SOLUTION: evaluate right before action based on previous action
-        try:
-            assert len(game_before_next_turn.get_possible_moves(pnum)) > 0
-        except AssertionError as e:
-            print(f"face up {game_before_next_turn.train_cards_face_up}")
-            print(f"train deck {sum(game_before_next_turn.train_deck.deck.values())}")
-            print(f"destination deck {sum(game_before_next_turn.destination_deck.deck.values())}")
-            print("hands")
-            for (i, p) in enumerate(game_before_next_turn.players):
-                print("Player", i)
-                print(p.hand)
-                print(p.hand_destination_cards)
-            exit(1)
-
-        possible_nextgame_actions = [(a, a.decide(game_before_next_turn.copy(), pnum)) for a in self.agents]
+        possible_nextgame_actions = []
+        for a in self.agents:
+            game_copy = game_before_next_turn.copy()
+            try:
+                assert len(game_copy.get_possible_moves(pnum)) > 0
+            except AssertionError as e:
+                print(f"face up {game_copy.train_cards_face_up}")
+                print(f"train deck {sum(game_copy.train_deck.deck.values())}")
+                print(f"destination deck {sum(game_copy.destination_deck.deck.values())}")
+                print("hands")
+                for (i, p) in enumerate(game_copy.players):
+                    print("Player", i)
+                    print(p.hand)
+                    print(p.hand_destination_cards)
+                self.run_failure = True
+                return
+                
+            possible_nextgame_actions.append((a, a.decide(game_copy, pnum)))
+        
+        
         best_future_q = None
         for (ag, act) in possible_nextgame_actions:
             assert act is not None, f"{ag.__class__.__name__} returned a None action"
