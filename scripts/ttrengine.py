@@ -52,12 +52,13 @@ class GameHandler:
 	
 	def eval_rewards(self, pnum, move, args):
 		if move == 'chooseDestinationCards':
-			reward = 0
-			cards = args[1]
-			for c in cards:
+			return 0
+			#reward = 0
+			#cards = args[1]
+			#for c in cards:
 				#reward shaping: subtract off tickets' value to represent negative impact of tickets
-				reward -= c.points
-			return reward
+				#reward -= c.points
+			#return reward
 		elif move == 'claimRoute':
 			#args: city1, city2, color (specifically, the color used to claim the route)
 			#check if route claimed successfully
@@ -85,7 +86,8 @@ class GameHandler:
 					if card.destinations[0] in player_graph.nodes() and card.destinations[1] in player_graph.nodes():
 						if nx.has_path(player_graph, card.destinations[0], card.destinations[1]):
 							player.completed_destination_cards.add(card)
-							reward += 2 * card.points
+							#reward += 2 * card.points
+							reward += card.points
 
 			return reward
 		elif move == 'drawTrainCard':
@@ -212,6 +214,18 @@ class GameHandler:
 			#Matters b/c drawing 1 of 2 cards will count as a move for make_move but not change current player
 			if cur_player != self.game.current_player:
 				self.turn_count += 1
+
+		if self.train:
+			for aql in self.aql_indices:
+				#find highest opponent
+				highest_opp = -float('inf')
+				for i in range(len(self.game.players)):
+					if i == aql:
+						continue
+					elif self.game.players[i].points > highest_opp:
+						highest_opp = self.game.players[i].points	
+				reward = 15 * (self.game.players[aql].points - highest_opp)
+				self.agents[aql].update_final(aql, self.game, reward)
 
 		#for i in range(0, self.game.number_of_players):
 		#	print("Player " + str(i+1) + ": " + str(self.game.players[i].points))

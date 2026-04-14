@@ -125,3 +125,43 @@ Agent results for agent Selfplay agent (run 6)
 {'scores': [82, 59], 'places': [2, 4], 'winner diff': [32, 68], 'total dest cards completed': 0, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x104011c50>: 135}
 Agent results for agent No-selfplay agent (run 7)
 {'scores': [100, 107], 'places': [2, 1], 'winner diff': [11, 0], 'total dest cards completed': 3, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x104012850>: 125}
+----APRIL 13 (1 game test to see if Q values look normal)-----
+Scoring Breakdown for agent (player 0)
+(1): Player 2, scoring 105 points
+(2): Player 3, scoring 69 points
+(3): Player 0, scoring 11 points
+(4): Player 1, scoring -10 points
+Agent weights [np.float64(-0.002636207289121786), np.float64(0.001751489819999199), np.float64(0.0012335766234982844), np.float64(0.002418592447097535), np.float64(0.001977522982900976), np.float64(-0.00029908912281795713), np.float64(0.00047259967722176817), np.float64(-0.00023998879023728978)]
+----APRIL 13 (10 game test to see if weights look normal)-----
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 124 points
+(2): Player 2, scoring 100 points
+(3): Player 3, scoring 96 points
+(4): Player 0, scoring -24 points
+Agent weights [np.float64(-0.03231718456179466), np.float64(0.012397949157275344), np.float64(0.006437203309580142), np.float64(0.015313218987665895), np.float64(0.012416115810021083), np.float64(0.0054590211569895365), np.float64(0.003477107074014022), np.float64(-0.005377038744913883)]
+----APRIL 13 (single set of weights selfplay)-----
+Scoring Breakdown for agent 0 (player 0)
+(1): Player 2, scoring 149 points
+(2): Player 3, scoring 103 points
+(3): Player 1, scoring 42 points
+(4): Player 0, scoring -11 points
+Scoring Breakdown for agent 1 (player 0)
+(1): Player 3, scoring 107 points
+(2): Player 2, scoring 94 points
+(3): Player 1, scoring 76 points
+(4): Player 0, scoring -22 points
+Scoring Breakdown for agent 2 (player 0)
+(1): Player 2, scoring 121 points
+(2): Player 3, scoring 91 points
+(3): Player 1, scoring 56 points
+(4): Player 0, scoring -18 points
+Scoring Breakdown for agent 3 (player 0)
+(1): Player 2, scoring 120 points
+(2): Player 1, scoring 102 points
+(3): Player 3, scoring 75 points
+(4): Player 0, scoring 1 points
+Agent weights
+0 [np.float64(-2.61534100631012), np.float64(9.435315205488768), np.float64(1.676610201067388), np.float64(15.274500190185323), np.float64(18.335220959559145), np.float64(12.22222569024095), np.float64(2.530007245074299), np.float64(0.06787655892259502)]
+1 [np.float64(-2.348553896452139), np.float64(9.485373356339313), np.float64(1.6430991722324462), np.float64(15.272526585152358), np.float64(18.472642813068756), np.float64(12.400545350789447), np.float64(2.551564092907379), np.float64(0.10409048140005828)]
+2 [np.float64(-2.422355511995373), np.float64(9.50827869495721), np.float64(1.6933149533587677), np.float64(15.418117736125467), np.float64(18.571378224067026), np.float64(12.382855200770528), np.float64(2.560950176553798), np.float64(0.10874587915686039)]
+3 [np.float64(-2.384419747625695), np.float64(9.401769120943475), np.float64(1.5142809048870667), np.float64(14.368233416840088), np.float64(16.955192570800254), np.float64(10.364827624431417), np.float64(2.4714990637290386), np.float64(-0.08619612865118852)]

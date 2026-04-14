@@ -22,7 +22,7 @@ train_score_record = []
 epsilon_start = 1
 agent.epsilon = epsilon_start
 
-num_training_sessions = 5000
+num_training_sessions = 10 #5000
 epsilon_target = 0.05
 cur_epsilon = epsilon_start
 epsilon_decay = 0.998805

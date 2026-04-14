@@ -30,13 +30,13 @@ class ApproximateQLearningAgent(Agent):
 
         #Class variables that should NOT change between training runs
 
-        feature_lst = [getattr(self, name) for name in self.__class__.__dict__ 
+        self.features = [getattr(self, name) for name in self.__class__.__dict__ 
                          if name.startswith("feature_") and callable(getattr(self, name))]
         
-        self.features = []
-        for a in self.agents:
-            for f in feature_lst:
-                self.features.append(lambda game, pnum, given_agent, f=f, a_type=type(a): f(game, pnum) if type(given_agent) == a_type else (0, 0, 1))
+        #self.features = []
+        #for a in self.agents:
+            #for f in feature_lst:
+                #self.features.append(lambda game, pnum, given_agent, f=f, a_type=type(a): f(game, pnum) if type(given_agent) == a_type else (0, 0, 1))
 
         self.weights = [0] * len(self.features)
         self.discount = 0.995
@@ -57,6 +57,7 @@ class ApproximateQLearningAgent(Agent):
         self.num_cards_needed = 0
         self.last_chosen_agent = None
         self.run_failure = False
+        self.best_agents_reporting = []
     
     def decide(self, game, pnum):        
         #get possible actions from agents
@@ -75,7 +76,7 @@ class ApproximateQLearningAgent(Agent):
         best_action = None
         best_agent = None
         self.best_agents_reporting = []
-        print("Deciding move")
+        #print("Deciding move")
         for (ag, act) in possible_actions:
             assert act is not None, f"{ag.__class__.__name__} returned a None action"
             #based on action a
@@ -84,7 +85,7 @@ class ApproximateQLearningAgent(Agent):
             #compute value of features given game state after taking action a from current game state
             evaluated_features = self.get_features(game_after_a, pnum, ag)
             q_val = np.dot(evaluated_features, self.weights)
-            print("Agent", ag.__class__.__name__, "suggested", act.function, act.args, "with score", q_val)
+            #print("Agent", ag.__class__.__name__, "suggested", act.function, act.args, "with score", q_val)
             if best_val is None or q_val > best_val:
                 best_val = q_val
                 best_action = act
@@ -126,27 +127,31 @@ class ApproximateQLearningAgent(Agent):
         self.last_chosen_agent = best_agent
         return best_action
     
+    def update_final(self, pnum, game_state, reward):
+        cur_features = self.get_features(game_state, pnum, None)
+        difference = reward - np.dot(cur_features, self.weights)
+        self.weights += self.alpha * difference * cur_features
+    
     def update(self, pnum, chosen_agent, game_after_action, game_before_next_turn, reward):
         #ISSUE: others will play between now and then!
         #SOLUTION: evaluate right before action based on previous action
         possible_nextgame_actions = []
         for a in self.agents:
-            game_copy = game_before_next_turn.copy()
             try:
-                assert len(game_copy.get_possible_moves(pnum)) > 0
+                assert len(game_before_next_turn.get_possible_moves(pnum)) > 0
             except AssertionError as e:
-                print(f"face up {game_copy.train_cards_face_up}")
-                print(f"train deck {sum(game_copy.train_deck.deck.values())}")
-                print(f"destination deck {sum(game_copy.destination_deck.deck.values())}")
+                print(f"face up {game_before_next_turn.train_cards_face_up}")
+                print(f"train deck {sum(game_before_next_turn.train_deck.deck.values())}")
+                print(f"destination deck {sum(game_before_next_turn.destination_deck.deck.values())}")
                 print("hands")
-                for (i, p) in enumerate(game_copy.players):
+                for (i, p) in enumerate(game_before_next_turn.players):
                     print("Player", i)
                     print(p.hand)
                     print(p.hand_destination_cards)
                 self.run_failure = True
                 return
                 
-            possible_nextgame_actions.append((a, a.decide(game_copy, pnum)))
+            possible_nextgame_actions.append((a, a.decide(game_before_next_turn, pnum)))
         
         
         best_future_q = None
@@ -160,8 +165,7 @@ class ApproximateQLearningAgent(Agent):
         
         cur_features = self.get_features(game_after_action, pnum, chosen_agent)
         difference = reward + self.discount * best_future_q - np.dot(cur_features, self.weights)
-        for i in range(len(self.weights)):
-            self.weights[i] += self.alpha * difference * cur_features[i]
+        self.weights += self.alpha * difference * cur_features
     
     def weight_function(self, zero_edges):
         def fn(u, v, d):
@@ -210,10 +214,12 @@ class ApproximateQLearningAgent(Agent):
                     else:
                         self.cards_needed[col] += e['weight']
 
-        res = []
-        for f in self.features:
-            this_res, min, max = f(game, pnum, agent)
-            res.append(self.scale_0_1(this_res, min, max))
+        res = np.zeros(len(self.features))
+        for (i, f) in enumerate(self.features):
+            this_res, min, max = f(game, pnum)
+            res[i] = self.scale_0_1(this_res, min, max)
+            #this_res, min, max = f(game, pnum, agent)
+            #res.append(self.scale_0_1(this_res, min, max))
         return res
     
     #def feature_num_players(self, game, pnum): #2-5

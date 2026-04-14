@@ -23,7 +23,7 @@ epsilon_start = 1
 for a in agent_lst:
     a.epsilon = epsilon_start
 
-num_training_sessions = 5000
+num_training_sessions = 4000
 epsilon_target = 0.05
 cur_epsilon = epsilon_start
 epsilon_decay = 0.998805
