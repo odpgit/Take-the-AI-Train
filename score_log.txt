@@ -79,3 +79,49 @@ Scoring Breakdown for agent (player 0)
 (3): Player 3, scoring 88 points
 (4): Player 0, scoring 63 points
 Agent weights [np.float64(0.7635520586846236), np.float64(-2.9330507533360097), np.float64(1.6003583504682553), np.float64(5.203530302790524), np.float64(4.088455272820309), np.float64(2.4018651110408618), np.float64(0.8787660225010134), np.float64(-0.3713972145275163), np.float64(6.30141670871321), np.float64(1.8680570804650438), np.float64(2.136815280639165), np.float64(5.231456890430902), np.float64(4.533498975795571), np.float64(4.162335754243219), np.float64(2.173589896906572), np.float64(-0.11176513911636583), np.float64(0.7662718063813531), np.float64(-0.8529470897289202), np.float64(0.7714900648977182), np.float64(2.8000352166839932), np.float64(2.2537593058661285), np.float64(1.4783097624226766), np.float64(0.4480255417817684), np.float64(-0.18658642423975985), np.float64(0.7357013625451265), np.float64(-1.3532371010877937), np.float64(0.9262636842217004), np.float64(3.1164266227828583), np.float64(2.3593098012645104), np.float64(1.557868594131783), np.float64(0.5502050238814796), np.float64(-0.24405321916546008)]
+-----APRIL 8 (selfplay epsilon decay)-------
+Scoring Breakdown for agent 0 (player 0)
+(1): Player 1, scoring 136 points
+(2): Player 2, scoring 103 points
+(3): Player 3, scoring 77 points
+(4): Player 0, scoring 2 points
+Scoring Breakdown for agent 1 (player 0)
+(1): Player 3, scoring 111 points
+(2): Player 1, scoring 89 points
+(3): Player 2, scoring 54 points
+(4): Player 0, scoring 46 points
+Scoring Breakdown for agent 2 (player 0)
+(1): Player 1, scoring 129 points
+(2): Player 3, scoring 88 points
+(3): Player 2, scoring 83 points
+(4): Player 0, scoring 33 points
+Scoring Breakdown for agent 3 (player 0)
+(1): Player 0, scoring 106 points
+(2): Player 3, scoring 86 points
+(3): Player 2, scoring 22 points
+(4): Player 1, scoring -21 points
+Agent weights
+0 [np.float64(1.4610642781198484), np.float64(-3.727882552076659), np.float64(1.571452582166687), np.float64(8.868581577605111), np.float64(7.818278040531614), np.float64(4.803957889254364), np.float64(1.2992131338023072), np.float64(-0.19340264902384882), np.float64(0.3117179676995931), np.float64(-1.5241671206822434), np.float64(0.4287296337988708), np.float64(2.188503634173952), np.float64(1.4253097580098275), np.float64(0.2637336279351542), np.float64(0.4805030440135234), np.float64(-0.13921959083341912), np.float64(1.367429103341807), np.float64(0.4018569327338519), np.float64(0.42186785461314674), np.float64(3.0028206921759706), np.float64(2.698339462613419), np.float64(1.7400884019313196), np.float64(0.3869847512122299), np.float64(0.025011383511362117), np.float64(1.9433472644184369), np.float64(-0.578744478089087), np.float64(0.7855530815570466), np.float64(3.9388010839030287), np.float64(2.994242217801356), np.float64(2.0131243314357676), np.float64(0.8374455486451636), np.float64(-0.07674590893511232)]
+1 [np.float64(1.5897687944250023), np.float64(-3.671491534716617), np.float64(1.5771417988420489), np.float64(8.943032232233499), np.float64(7.9040442913599716), np.float64(4.774079843910601), np.float64(1.3375792562159852), np.float64(-0.11348816373604798), np.float64(0.4027923787181514), np.float64(-1.4153339288582376), np.float64(0.43392228071903194), np.float64(2.2441496012994064), np.float64(1.5094621838708135), np.float64(0.38674924909014397), np.float64(0.4873547177614829), np.float64(-0.1255311427378576), np.float64(1.379675678735177), np.float64(0.44624704004320326), np.float64(0.4143695827778841), np.float64(3.000586030215261), np.float64(2.6751323776736693), np.float64(1.7175801712498187), np.float64(0.378665944159844), np.float64(0.08698179362318495), np.float64(2.09024660048593), np.float64(-0.3907008732965606), np.float64(0.8015087790750131), np.float64(3.9534335170370274), np.float64(3.018545968913437), np.float64(1.9507583210590134), np.float64(0.8453249916409341), np.float64(-0.0216924657638307)]
+2 [np.float64(1.5623253199838592), np.float64(-3.794685336745266), np.float64(1.5753373574332439), np.float64(8.992320880833127), np.float64(7.920887367460836), np.float64(4.8492626153059195), np.float64(1.348905238284371), np.float64(-0.0747991398030487), np.float64(0.3683182685145145), np.float64(-1.4019373446875723), np.float64(0.40685294628725477), np.float64(2.168240684411956), np.float64(1.3830879965467346), np.float64(0.33499647067499155), np.float64(0.4740568570118732), np.float64(-0.12238569303356601), np.float64(1.4207220990857448), np.float64(0.47908612204060563), np.float64(0.4078872351418625), np.float64(2.9676831019016623), np.float64(2.654570060103275), np.float64(1.712328143385176), np.float64(0.3856625957487375), np.float64(0.08455715969220601), np.float64(2.048457220868448), np.float64(-0.39297812397375426), np.float64(0.7795345458646801), np.float64(3.918287866170072), np.float64(2.9816093640710744), np.float64(1.9298827343717582), np.float64(0.8270652803810257), np.float64(0.02778236322395432)]
+3 [np.float64(2.2836743303712512), np.float64(0.3353182479553938), np.float64(0.40885563535285674), np.float64(2.1405829124452604), np.float64(1.8278937641398976), np.float64(1.3922647370098504), np.float64(0.9083352742785792), np.float64(0.13446096456426823), np.float64(13.880437945577768), np.float64(5.269144332074173), np.float64(2.1785564273736617), np.float64(5.9931550688454305), np.float64(6.725395720588794), np.float64(7.063077079619212), np.float64(5.040261490493441), np.float64(0.9943093939344594), np.float64(2.0619411076626806), np.float64(1.2385708267729196), np.float64(0.25613896038308503), np.float64(1.393693217957709), np.float64(1.3876023015927674), np.float64(1.3887267599196074), np.float64(0.5774183435580648), np.float64(0.16201161745980228), np.float64(2.1079029195433137), np.float64(0.9485317909675519), np.float64(0.2941553767119086), np.float64(1.6361029241859333), np.float64(1.4688148404377195), np.float64(1.3697426951581566), np.float64(0.6732449014251688), np.float64(0.14547327957552414)]
+-----APRIL 9 (no selfplay epsilon decay)-------
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 127 points
+(2): Player 0, scoring 106 points
+(3): Player 2, scoring 81 points
+(4): Player 3, scoring 57 points
+Agent weights [np.float64(0.5853616950434649), np.float64(-3.9128930483115), np.float64(1.6794565880620158), np.float64(5.206508712560192), np.float64(3.7022718962243264), np.float64(2.2974673145550057), np.float64(1.0891733690471568), np.float64(-0.49590741036259683), np.float64(6.87456191707399), np.float64(1.8335166399444134), np.float64(2.1960168168256113), np.float64(4.144692614028686), np.float64(3.4813941973991853), np.float64(3.6234033511963926), np.float64(2.490442823194341), np.float64(-0.16508285259780997), np.float64(0.5952589001533186), np.float64(-0.27769115404147054), np.float64(0.39639615450984267), np.float64(1.3356242430141554), np.float64(1.0195380914990002), np.float64(0.7429285440783292), np.float64(0.28597064625873925), np.float64(-0.09546153940665991), np.float64(0.6587292210223097), np.float64(-0.4791589796640725), np.float64(0.48690397941416247), np.float64(1.5020233615015433), np.float64(1.075714709692546), np.float64(0.7921919100324065), np.float64(0.3540998197891371), np.float64(-0.12460616609820796)]
+----APRIL 13 (smaller test results)-----
+Agent results for agent Selfplay agent (run 6)
+{'scores': [106, 71, 106, 82, 76], 'places': [2, 3, 1, 3, 3], 'winner diff': [11, 65, 0, 33, 41], 'total dest cards completed': 6, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x112e71750>: 326}
+Agent results for agent No-selfplay agent (run 7)
+{'scores': [106, 100, 101, 103, 110], 'places': [1, 3, 3, 3, 1], 'winner diff': [0, 16, 12, 7, 0], 'total dest cards completed': 7, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x112e72390>: 319}
+Agent results for agent Selfplay agent (run 6)
+{'scores': [122, 121, 86, 107, 86, 45, 51, 93, 62, 99], 'places': [1, 1, 1, 2, 4, 3, 4, 2, 4, 4], 'winner diff': [0, 0, 0, 30, 57, 51, 67, 23, 36, 23], 'total dest cards completed': 11, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x110b6ecd0>: 656}
+Agent results for agent No-selfplay agent (run 7)
+{'scores': [90, 43, 84, 102, 97, 102, 104, 95, 79, 92], 'places': [2, 4, 3, 2, 3, 2, 2, 3, 4, 2], 'winner diff': [3, 76, 21, 19, 13, 18, 2, 18, 28, 9], 'total dest cards completed': 12, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x110b6f950>: 653}
+Agent results for agent Selfplay agent (run 6)
+{'scores': [82, 59], 'places': [2, 4], 'winner diff': [32, 68], 'total dest cards completed': 0, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x104011c50>: 135}
+Agent results for agent No-selfplay agent (run 7)
+{'scores': [100, 107], 'places': [2, 1], 'winner diff': [11, 0], 'total dest cards completed': 3, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x104012850>: 125}

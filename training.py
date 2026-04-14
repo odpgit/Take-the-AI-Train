@@ -25,18 +25,20 @@ for a in agent_lst:
 
 num_training_sessions = 5000
 epsilon_target = 0.05
-when_reach_target = 0.65 * num_training_sessions
+cur_epsilon = epsilon_start
+epsilon_decay = 0.998805
+#when_reach_target = 0.65 * num_training_sessions
 
 game_no = 0
 while game_no < num_training_sessions:
-    if game_no >= when_reach_target:
-        epsilon_this_iter = epsilon_target
-    else:
-        epsilon_this_iter = ((epsilon_target - epsilon_start) / when_reach_target) * game_no + epsilon_start
+    # if game_no >= when_reach_target:
+    #     epsilon_this_iter = epsilon_target
+    # else:
+    #     epsilon_this_iter = ((epsilon_target - epsilon_start) / when_reach_target) * game_no + epsilon_start
    
-    for a in agent_lst:
-        a.reinitialize_vars()
-        a.epsilon = epsilon_this_iter
+    # for a in agent_lst:
+    #     a.reinitialize_vars()
+    #     a.epsilon = epsilon_this_iter
     
     player_list = [Player(hand=emptyCardDict(), number_of_trains=45, points=0) for i in range(0,4)]
     game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
@@ -50,11 +52,16 @@ while game_no < num_training_sessions:
 
     #rerun this game number if the run was not successful 
     #record points if the run was successful
+    for a in agent_lst:
+        a.reinitialize_vars()
     if gh.run_failure:
         print(f"Failure detected, redoing run {game_no}")
     else:
         for i in range(len(player_list)):
             train_score_record[i].append(player_list[i].points)
+        cur_epsilon = max(epsilon_target, cur_epsilon * epsilon_decay)
+        for a in agent_lst:
+            a.epsilon = cur_epsilon
         game_no += 1
 
 #test it out!

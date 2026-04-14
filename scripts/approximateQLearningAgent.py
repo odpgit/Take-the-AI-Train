@@ -74,6 +74,8 @@ class ApproximateQLearningAgent(Agent):
         best_val = None
         best_action = None
         best_agent = None
+        self.best_agents_reporting = []
+        print("Deciding move")
         for (ag, act) in possible_actions:
             assert act is not None, f"{ag.__class__.__name__} returned a None action"
             #based on action a
@@ -82,11 +84,16 @@ class ApproximateQLearningAgent(Agent):
             #compute value of features given game state after taking action a from current game state
             evaluated_features = self.get_features(game_after_a, pnum, ag)
             q_val = np.dot(evaluated_features, self.weights)
+            print("Agent", ag.__class__.__name__, "suggested", act.function, act.args, "with score", q_val)
             if best_val is None or q_val > best_val:
                 best_val = q_val
                 best_action = act
                 best_agent = ag
         
+        for (ag, act) in possible_actions:
+            if act == best_action:
+                self.best_agents_reporting.append(ag)
+
         self.last_chosen_agent = best_agent
         return best_action
     
@@ -209,11 +216,14 @@ class ApproximateQLearningAgent(Agent):
             res.append(self.scale_0_1(this_res, min, max))
         return res
     
-    def feature_num_players(self, game, pnum): #2-5
-        return game.number_of_players, 2, 5
+    #def feature_num_players(self, game, pnum): #2-5
+        #return game.number_of_players, 2, 5
     
     def feature_minimum_trains_left(self, game, pnum): #2-45
         return min([p.number_of_trains for p in game.players]), 2, 45
+    
+    def feature_train_urgency(self, game, pnum): #0-1
+        return 1 - game.players[pnum].number_of_trains / 45, 0, 1
     
     def feature_longest_path(self, game, pnum): #0-45?
         overall_max = 0

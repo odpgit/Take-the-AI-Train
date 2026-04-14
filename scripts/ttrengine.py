@@ -48,6 +48,7 @@ class GameHandler:
 		self.train = True # NOTE: set this to False when not training!!
 		self.aql_indices = set([0]) # NOTE: set this accordingly!
 		self.run_failure = False
+		self.agents_reporting = dict()
 	
 	def eval_rewards(self, pnum, move, args):
 		if move == 'chooseDestinationCards':
@@ -153,7 +154,6 @@ class GameHandler:
 			
 			cur_player = self.game.current_player
 			if self.train and cur_player in self.aql_indices:
-
 				#Evaluate rewards from previous move taken, if this isn't the first move
 				if prev_games[cur_player] is not None:
 					#eval_rewards uses current game state, which is right
@@ -174,6 +174,13 @@ class GameHandler:
 					return
 			else:	
 				move = self.agents[cur_player].decide(self.game, cur_player)
+
+			if cur_player in self.aql_indices:
+				for ag in self.agents[cur_player].best_agents_reporting:
+					if ag in self.agents_reporting:
+						self.agents_reporting[ag] += 1
+					else:
+						self.agents_reporting[ag] = 1
 
 			try:
 				movelog.append(LogMove(cur_player, move.function, move.args))
@@ -1283,6 +1290,19 @@ class Game:
 				#print "Did not finish " + str(destination.destinations) + "!  -" + str(destination.points)
 				rscore = rscore - destination.points
 		return rscore
+	
+	def getNumCompletedDCards(self, pnum):
+		num = 0
+		player = self.players[pnum]
+		player_graph = self.player_graph(pnum)
+		
+		for destination in player.hand_destination_cards:
+			try:
+				if nx.has_path(player_graph, destination.destinations[0], destination.destinations[1]):
+					num += 1
+			except:
+				pass
+		return num
 
 	def getUnclaimedRoutes(self):
 		colors = ["RED", "ORANGE", "BLUE", "PINK", "WHITE", "YELLOW", "BLACK", "GREEN"]
@@ -1308,6 +1328,17 @@ class Game:
 		winners = [i for i in range(0, len(self.players)) if self.players[i].points == max_points]
 		
 		return winners
+	
+	def get_place(self, pnum):
+		points_list = [x.points for x in self.players]
+		sorted_unique_points_list = sorted(list(set(points_list)), reverse=True) #no duplicates
+		ranks = {}
+		cur_place = 1
+		for pts in sorted_unique_points_list:
+			ranks[pts] = cur_place
+			cur_place += points_list.count(pts)
+
+		return ranks[points_list[pnum]]
 	
 	def print_scoresheet(self):
 		points_list = sorted(list(set([x.points for x in self.players])), reverse=True) #no duplicates
