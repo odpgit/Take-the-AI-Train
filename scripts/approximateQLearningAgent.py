@@ -38,9 +38,21 @@ class ApproximateQLearningAgent(Agent):
             #for f in feature_lst:
                 #self.features.append(lambda game, pnum, given_agent, f=f, a_type=type(a): f(game, pnum) if type(given_agent) == a_type else (0, 0, 1))
 
-        self.weights = [0] * len(self.features)
+        self.weights = np.zeros(len(self.features))
+        # Bootstrapping weights
+        self.weights[0] = 0 #min trains left
+        self.weights[1] = -2 #train urgency
+        self.weights[2] = -50 #remaining destination card points
+        self.weights[3] = -20 #train cards needed for destination cards
+        self.weights[4] = 0 #faceup cards for destination cards
+        self.weights[5] = 30 #points gained from last move
+        self.weights[6] = 0 #wild cards available
+        self.weights[7] = -5 #bias
+        
         self.discount = 0.995
-        self.alpha = 0.0001
+        self.alpha = 0.001
+        self.weight_decay = 0.9999
+        self.weight_decay_final = 0.99
         self.epsilon = 1
         self.reinitialize_vars()        
         
@@ -58,6 +70,7 @@ class ApproximateQLearningAgent(Agent):
         self.last_chosen_agent = None
         self.run_failure = False
         self.best_agents_reporting = []
+        self.prev_points = 0
     
     def decide(self, game, pnum):        
         #get possible actions from agents
@@ -71,14 +84,19 @@ class ApproximateQLearningAgent(Agent):
         
         possible_actions = []
         for a in self.agents:
-            possible_actions.append((a, a.decide(game.copy(), pnum)))
+            possible_actions.append((a, a.decide(game, pnum)))
         best_val = None
         best_action = None
         best_agent = None
         self.best_agents_reporting = []
         #print("Deciding move")
         for (ag, act) in possible_actions:
-            assert act is not None, f"{ag.__class__.__name__} returned a None action"
+            try:
+                assert act is not None
+            except AssertionError as e:
+                print(f"{ag.__class__.__name__} returned a None action")
+                self.run_failure = True
+                return
             #based on action a
             game_after_a = game.copy()
             game_after_a.make_move(act.function, act.args)
@@ -130,7 +148,7 @@ class ApproximateQLearningAgent(Agent):
     def update_final(self, pnum, game_state, reward):
         cur_features = self.get_features(game_state, pnum, None)
         difference = reward - np.dot(cur_features, self.weights)
-        self.weights += self.alpha * difference * cur_features
+        self.weights = self.weights * self.weight_decay_final + self.alpha * difference * cur_features
     
     def update(self, pnum, chosen_agent, game_after_action, game_before_next_turn, reward):
         #ISSUE: others will play between now and then!
@@ -165,7 +183,11 @@ class ApproximateQLearningAgent(Agent):
         
         cur_features = self.get_features(game_after_action, pnum, chosen_agent)
         difference = reward + self.discount * best_future_q - np.dot(cur_features, self.weights)
-        self.weights += self.alpha * difference * cur_features
+        self.weights = self.weights * self.weight_decay + self.alpha * difference * cur_features
+        
+        #manual clipping for weights
+        self.weights[1] = max(-5, self.weights[1]) #train urgency should never plummet
+        self.weights[2] = min(-10, self.weights[2]) #incomplete points should never skyrocket
     
     def weight_function(self, zero_edges):
         def fn(u, v, d):
@@ -231,20 +253,6 @@ class ApproximateQLearningAgent(Agent):
     def feature_train_urgency(self, game, pnum): #0-1
         return 1 - game.players[pnum].number_of_trains / 45, 0, 1
     
-    def feature_longest_path(self, game, pnum): #0-45?
-        overall_max = 0
-        own_max = 0
-        for i in range(game.number_of_players):
-            player_graph = game.player_graph(i)
-            longest_by_node = [game.findMaxWeightSumForNode(player_graph, v, []) for v in player_graph.nodes()]
-            this_max = max(longest_by_node) if len(longest_by_node) > 0 else 0
-            if i == pnum:
-                own_max = this_max
-            if this_max > overall_max:
-                overall_max = this_max
-        
-        return overall_max - own_max + 1, 0, 45 #to avoid zeroing out in vector multiplication
-    
     def feature_dcard_points_remaining(self, game, pnum): #vaguely 0-63 (3 tickets @ 22+21+20)
         res = 0
         for dcard in self.remaining_dest:
@@ -264,11 +272,18 @@ class ApproximateQLearningAgent(Agent):
         
         return count, 0, 5
     
-    def feature_current_points(self, game, pnum): #vaguely 0-200
-        return game.players[pnum].points, 0, 200
+    def feature_points_earned(self, game, pnum): #0-15
+        delta = game.players[pnum].points - self.prev_points
+        self.prev_points = game.players[pnum].points
+        return delta, 0, 15
 
     def feature_wild_cards_available(self, game, pnum): #0-5
         return game.train_cards_face_up["wild"], 0, 5
+    
+    def feature_bias(self, game, pnum):
+        return 1, 0, 1
+    
+    #Ideas for other features: Relative score (agent score - max opponent score), tickets completed / total tickets, 45 - min(opp trains left)
 
     def train_decide(self, game, pnum):
         #with probability epsilon, randomly decide between the agents

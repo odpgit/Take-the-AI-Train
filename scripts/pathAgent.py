@@ -11,8 +11,15 @@ class PathAgent(Agent):
 
 	def decide(self, game, pnum):
 		possible_moves = game.get_possible_moves(pnum)
-		assert len(possible_moves) > 0, f"No moves left to make because train deck {sum(game.train_deck.deck.values())} train deck discard {sum(game.train_deck.discard_pile.values())} destination deck {sum(game.destination_deck.deck.values())}"
 		
+		try:
+			assert len(possible_moves) > 0
+		except AssertionError as e:
+			print(f"No moves left to make because train deck {sum(game.train_deck.deck.values())} train deck discard {sum(game.train_deck.discard_pile.values())} destination deck {sum(game.destination_deck.deck.values())}")
+			for i in range(len(game.players)):
+				print(i, game.players[i].hand, game.players[i].hand_destination_cards)
+			return None
+
 		if len(possible_moves) == 0:
 			f1 = open('disaster' + '.go', 'wb')
 			pickle.dump(game, f1)
@@ -217,7 +224,13 @@ class PathAgent(Agent):
 		#print game.board.get_free_connection(paths_to_take[0][0], paths_to_take[0][1], 'WHITE')
 
 	def choose_destination_cards(self, moves, game, pnum, num_keep):
+		max_args_len = 0
+		max_args_len_move = None
 		for m in moves:
 			if len(m.args[1]) == game.destination_deck_draw_rules[0]:
 				#print 'd'
 				return m
+			if len(m.args[1]) > max_args_len:
+				max_args_len = len(m.args[1])
+				max_args_len_move = m
+		return max_args_len_move

@@ -165,3 +165,122 @@ Agent weights
 1 [np.float64(-2.348553896452139), np.float64(9.485373356339313), np.float64(1.6430991722324462), np.float64(15.272526585152358), np.float64(18.472642813068756), np.float64(12.400545350789447), np.float64(2.551564092907379), np.float64(0.10409048140005828)]
 2 [np.float64(-2.422355511995373), np.float64(9.50827869495721), np.float64(1.6933149533587677), np.float64(15.418117736125467), np.float64(18.571378224067026), np.float64(12.382855200770528), np.float64(2.560950176553798), np.float64(0.10874587915686039)]
 3 [np.float64(-2.384419747625695), np.float64(9.401769120943475), np.float64(1.5142809048870667), np.float64(14.368233416840088), np.float64(16.955192570800254), np.float64(10.364827624431417), np.float64(2.4714990637290386), np.float64(-0.08619612865118852)]
+----APRIL 14 (reward shaping fix non selfplay)-----
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 123 points
+(2): Player 3, scoring 99 points
+(3): Player 2, scoring 84 points
+(4): Player 0, scoring 51 points
+Agent weights [  -4.26100704 -207.81877317  -92.31262657 -131.49969232  -86.93541793
+  -53.22840636  -24.22762706  -15.90477039]
+----APRIL 14 (feature fix non selfplay smoke test)-----
+Scoring Breakdown for agent (player 0)
+(1): Player 3, scoring 117 points
+(2): Player 2, scoring 106 points
+(3): Player 1, scoring 7 points
+(4): Player 0, scoring -14 points
+Agent weights [ 0.95153733 -3.38230534 -1.52478594 -2.72574943 -1.65486785 -1.08689382
+ 14.51050111 -0.17184974 -3.54681213]
+----APRIL 14 (non selfplay full run)-----
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 119 points
+(2): Player 2, scoring 77 points
+(3): Player 3, scoring 76 points
+(4): Player 0, scoring -7 points
+Agent weights [387.29818911  49.58798491  61.2155035  311.92638619 328.29071001
+ 262.19080349 341.01823549  25.87359341 455.02871954]
+----APRIL 14 (non selfplay sanity check)-----
+Agent weights at iteration 99 [21.20957885 -3.33517441  1.06531961 15.68594846 18.89393023 14.47111121
+ 60.66995075  0.51852885 17.13370056]
+Agent weights at iteration 199 [32.46097821 -1.25850559  3.25001436 26.10265694 28.56037647 23.96844702
+ 59.95207851  0.69519876 31.54989702]
+Scoring Breakdown for agent (player 0)
+(1): Player 3, scoring 118 points
+(2): Player 1, scoring 91 points
+(3): Player 2, scoring 53 points
+(4): Player 0, scoring -3 points
+Agent weights [31.93923871 -2.46005549  2.76245247 25.88369441 28.83167728 21.19881582
+ 66.14679404  1.09224472 29.43132988]
+----APRIL 14 (non selfplay sanity check II)-----
+Agent weights at iteration 99 [22.66005143 -1.74498192  2.51395295 18.23448766 21.95772171 17.41546278
+ 61.89839945  0.55546423 21.01788459]
+Agent weights at iteration 199 [31.47206201 -1.25773519  3.70610721 27.4055351  29.95477919 21.9352031
+ 68.83159169  1.05251227 30.93886539]
+Scoring Breakdown for agent (player 0)
+(1): Player 3, scoring 89 points
+(2): Player 1, scoring 47 points
+(3): Player 2, scoring 39 points
+(4): Player 0, scoring -57 points
+Agent weights [33.75871474 -1.59982775  3.45229449 27.84679502 31.26982145 23.96599122
+ 75.73599522  1.3298011  32.71449689]
+----APRIL 14 (non selfplay final FINAL final run)-----
+Scoring Breakdown for agent (player 0)
+(1): Player 2, scoring 128 points
+(2): Player 1, scoring 103 points
+(3): Player 3, scoring 74 points
+(4): Player 0, scoring 23 points
+Agent weights [23.29532065 -6.99814537 -1.32716234 12.77705835 16.22412845 12.36045657
+ 75.06427902  0.18442204 14.037974  ]
+----APRIL 14 (non selfplay testing)-----
+Agent results for agent Non-selfplay agent
+{'scores': [-3, 20, 14, 20, 22, -11, -3, -12, 7, 15, -5, 2, 18, 10, 8, 7, 39, 6, 9, 22, 4, -2, -9, 14, 7, -1, 25, 25, 7, -15, 4, -6, -10, 9, 16, 16, -3, 19, -6, -9, 5, -5, 4, -9, 6, 4, 39, 4, 5, 29, -8, 1, 6, 5, -13, 10, -6, -9, -11, -3, 12, 1, -4, -10, -6, 24, 7, -37, -7, 13, -11, -43, -46, 5, 28, 15, 19, 9, 34, 0, 26, 2, 10, 19, 25, -5, 5, -8, -2, 1, -13, 12, 6, -1, 10, 2, 24, 2, 4, 6], 'places': [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 3, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4], 'winner diff': [132, 91, 101, 90, 110, 115, 117, 127, 87, 93, 121, 132, 89, 101, 109, 103, 155, 133, 112, 91, 102, 116, 125, 153, 90, 104, 65, 113, 122, 123, 85, 89, 138, 84, 104, 66, 130, 104, 130, 112, 107, 108, 156, 127, 126, 130, 55, 113, 104, 89, 124, 116, 151, 107, 90, 106, 138, 130, 115, 111, 145, 104, 126, 138, 101, 106, 106, 162, 116, 99, 113, 179, 154, 103, 61, 72, 91, 68, 35, 105, 72, 104, 123, 100, 87, 122, 101, 113, 108, 113, 120, 94, 72, 118, 99, 95, 108, 134, 115, 156], 'total dest cards completed': 36, <hungryAgent.HungryAgent object at 0x106875e50>: 2922, <pathAgent.PathAgent object at 0x106876050>: 1555, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x106875fd0>: 830, <oneStepThinkerAgent.OneStepThinkerAgent object at 0x106876010>: 303}
+----APRIL 14 (non selfplay fixes smoke train run)-----
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 120 points
+(2): Player 3, scoring 98 points
+(3): Player 2, scoring 73 points
+(4): Player 0, scoring 4 points
+Agent weights [ 20.42702661 -23.49575224  -7.88473344  -6.28612518  -5.48479598
+   0.97689673  76.29563643  -0.16732775 -10.45940838]
+----APRIL 14 (non selfplay fixes smoke tests)-----
+Agent results for agent Non-selfplay agent
+{'scores': [-41, 0, 13, 48, 19, 19, 29, 36, 18, 19], 'places': [4, 4, 4, 3, 4, 4, 4, 4, 4, 4], 'winner diff': [157, 117, 112, 63, 85, 101, 81, 47, 98, 127], 'total dest cards completed': 6, <oneStepThinkerAgent.OneStepThinkerAgent object at 0x106c74450>: 36, <hungryAgent.HungryAgent object at 0x106c74290>: 282, <pathAgent.PathAgent object at 0x106c74490>: 151, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x106c74410>: 86}
+Agent results for agent Non-selfplay agent
+{'scores': [37, 14, 35, 18, 9, 36, 32, 22, 20, 10], 'places': [3, 4, 3, 4, 4, 4, 4, 4, 4, 4], 'winner diff': [68, 90, 69, 95, 83, 69, 81, 84, 77, 139], 'total dest cards completed': 5, 'winner total dest cards completed': [1, 3, 2, 5, 1, 5, 3, 2, 2, 3], <oneStepThinkerAgent.OneStepThinkerAgent object at 0x110975610>: 38, <hungryAgent.HungryAgent object at 0x110975450>: 304, <pathAgent.PathAgent object at 0x110975650>: 122, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x1109755d0>: 84}
+----APRIL 14 (non selfplay fixes II smoke train/test run)------
+Scoring Breakdown for agent (player 0)
+(1): Player 3, scoring 105 points
+(2): Player 1, scoring 90 points
+(3): Player 2, scoring 61 points
+(4): Player 0, scoring -16 points
+Agent weights [ 1.92861088e+01 -2.44309557e+01 -8.33311319e+00 -5.54402049e+00
+ -5.29266377e+00  8.59553883e-03  6.86537904e+01 -5.77432870e-01
+ -1.26132430e+01]
+Agent results for agent Non-selfplay agent
+{'scores': [15, 32, 37, 17, 14, 21, 25, 8, 8, 15], 'places': [4, 4, 4, 4, 4, 4, 4, 4, 4, 4], 'winner diff': [107, 102, 93, 66, 142, 89, 103, 111, 128, 104], 'total dest cards completed': 2, 'winner total dest cards completed': [3, 6, 6, 1, 7, 2, 6, 2, 6, 3], <hungryAgent.HungryAgent object at 0x107975790>: 290, <pathAgent.PathAgent object at 0x107975990>: 163, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x107975910>: 79, <oneStepThinkerAgent.OneStepThinkerAgent object at 0x107975950>: 25}
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 171 points
+(2): Player 3, scoring 97 points
+(3): Player 2, scoring 71 points
+(4): Player 0, scoring 20 points
+Agent weights [ 178.92582594 -253.57068154  -63.07641781  -14.01391881   -7.60059057
+  765.28538862   -2.80860735 -150.71799664]
+Agent results for agent Non-selfplay agent
+{'scores': [38, 16, 18, 15, 19, 16, 24, 8, 20, 14], 'places': [3, 4, 4, 4, 4, 3, 4, 4, 4, 4], 'winner diff': [61, 121, 108, 102, 107, 110, 70, 88, 77, 109], 'total dest cards completed': 1, 'winner total dest cards completed': [1, 7, 2, 7, 7, 2, 6, 5, 1, 2], <pathAgent.PathAgent object at 0x104474690>: 160, <hungryAgent.HungryAgent object at 0x104474590>: 277, <oneStepThinkerAgent.OneStepThinkerAgent object at 0x104474650>: 22, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x104474610>: 83}
+Agent results for agent Non-selfplay agent
+{'scores': [28, 18, 2, 37, 11, 23, 10, 8, 37, 37], 'places': [4, 4, 4, 3, 4, 4, 4, 4, 4, 4], 'winner diff': [80, 114, 90, 72, 116, 104, 98, 80, 92, 60], 'total dest cards completed': 4, 'winner total dest cards completed': [1, 6, 1, 2, 6, 3, 1, 5, 2, 1], <pathAgent.PathAgent object at 0x10496e350>: 158, <hungryAgent.HungryAgent object at 0x10496e250>: 302, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x10496e2d0>: 94, <oneStepThinkerAgent.OneStepThinkerAgent object at 0x10496e310>: 14}
+Scoring Breakdown for agent (player 0)
+(1): Player 1, scoring 110 points
+(2): Player 3, scoring 102 points
+(3): Player 2, scoring 99 points
+(4): Player 0, scoring -23 points
+Agent weights [ 203.68344646  -11.88467793  -30.74761085   26.46913619   33.61095847
+  875.35572191   -4.90336282 -125.19854094]
+Scoring Breakdown for agent (player 0)
+(1): Player 2, scoring 119 points
+(2): Player 3, scoring 87 points
+(3): Player 1, scoring 36 points
+(4): Player 0, scoring 34 points
+Agent weights [  79.92800822   -7.02989155  -90.10590242  -47.84794362  -53.59020168
+  284.42700576  -12.57799796 -312.1587978 ]
+Agent results for agent Non-selfplay agent
+{'scores': [6, 15, 18, 26, 29, 19, 20, 15, 14, 20], 'places': [4, 4, 4, 4, 4, 4, 4, 4, 4, 4], 'winner diff': [106, 70, 86, 97, 86, 86, 74, 89, 108, 103], 'total dest cards completed': 2, 'winner total dest cards completed': [2, 2, 2, 2, 2, 3, 1, 3, 2, 3], <pathAgent.PathAgent object at 0x11326ea50>: 155, <hungryAgent.HungryAgent object at 0x11326e950>: 269, <oneStepThinkerAgent.OneStepThinkerAgent object at 0x11326ea10>: 21, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x11326e9d0>: 107}
+Scoring Breakdown for agent (player 0)
+(1): Player 3, scoring 112 points
+(2): Player 2, scoring 92 points
+(3): Player 1, scoring 28 points
+(4): Player 0, scoring 27 points
+Agent weights [ 107.36585149   -9.21162067  -77.95171447  -34.36650766  -24.87353677
+  345.08205437   -9.44190556 -277.49580981]
+Agent results for agent Non-selfplay agent
+{'scores': [42, 9, 37, 18, 19, 27, 24, 31, 11, 31], 'places': [4, 4, 4, 4, 4, 4, 4, 4, 4, 4], 'winner diff': [63, 104, 62, 91, 95, 73, 72, 74, 88, 98], 'total dest cards completed': 7, 'winner total dest cards completed': [2, 5, 2, 2, 6, 5, 1, 2, 3, 3], <oneStepThinkerAgent.OneStepThinkerAgent object at 0x105fe1b10>: 33, <hungryAgent.HungryAgent object at 0x105fe1a50>: 272, <pathAgent.PathAgent object at 0x105fe1b50>: 146, <longRouteJunkieAgent.LongRouteJunkieAgent object at 0x105fe1ad0>: 104}

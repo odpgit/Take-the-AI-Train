@@ -19,13 +19,13 @@ dest_deck_dict = destinationdeckdict(dest_list=loaddestinationdeckfromfile("game
 agent = ApproximateQLearningAgent()
 
 train_score_record = []
-epsilon_start = 1
+epsilon_start = 0.4 #1
 agent.epsilon = epsilon_start
 
-num_training_sessions = 10 #5000
+num_training_sessions = 150 #4000
 epsilon_target = 0.05
 cur_epsilon = epsilon_start
-epsilon_decay = 0.998805
+epsilon_decay = 0.99 #0.998
 #when_reach_target = 0.65 * num_training_sessions
 
 game_no = 0
@@ -47,7 +47,7 @@ while game_no < num_training_sessions:
 
     start = time.time()
     gh.play(runnum=game_no, save=False)
-    print (f"Game no. {game_no} took {gh.turn_count} turns ({(time.time() - start):.2f} seconds)")
+    print (f"Game no. {game_no}, scored {player_list[0].points}, dcards: {game_object.getNumCompletedDCards(0)} complete and {game_object.getNumIncompleteDCards(0)} incomplete totaling {len(player_list[0].hand_destination_cards)} for {game_object.getDCardScore(0)} points, took {gh.turn_count} turns ({(time.time() - start):.2f} seconds)")
 
     #rerun this game number if the run was not successful 
     #record points if the run was successful

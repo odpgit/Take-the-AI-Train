@@ -8,6 +8,7 @@ import copyreg
 import types
 from agent import Agent
 import copy
+import sys
 
 def _pickle_method(m):
 	if m.im_self is None:
@@ -52,7 +53,7 @@ class GameHandler:
 	
 	def eval_rewards(self, pnum, move, args):
 		if move == 'chooseDestinationCards':
-			return 0
+			return -0.05 * (45 - min([p.number_of_trains for p in self.game.players]))
 			#reward = 0
 			#cards = args[1]
 			#for c in cards:
@@ -82,16 +83,15 @@ class GameHandler:
 			player = self.game.players[pnum]
 			player_graph = self.game.player_graph(pnum)
 			for card in player.hand_destination_cards:
-				if card not in player.completed_destination_cards:
+				if card not in player.completed_destination_cards_train:
 					if card.destinations[0] in player_graph.nodes() and card.destinations[1] in player_graph.nodes():
 						if nx.has_path(player_graph, card.destinations[0], card.destinations[1]):
-							player.completed_destination_cards.add(card)
-							#reward += 2 * card.points
+							player.completed_destination_cards_train.add(card)
 							reward += card.points
 
 			return reward
 		elif move == 'drawTrainCard':
-			return 0
+			return -0.05 * (45 - min([p.number_of_trains for p in self.game.players]))
 		
 	def generate_destination_card_choices(self, pnum, num_keep):
 		#chooses destination cards for a specified player
@@ -102,6 +102,8 @@ class GameHandler:
 		dest_card_set = self.game.list_pending_destination_cards(pnum)
 		assert len(dest_card_set) == 3, f"dest card set len is {len(dest_card_set)}"
 		for x in range(num_keep, len(dest_card_set) + 1):
+			if not self.game.players[pnum].can_draw_destination_cards(x):
+				continue
 			comb = itertools.combinations(dest_card_set, x)
 			for cardset in comb:
 				pmoves.append(Move('chooseDestinationCards', [pnum, list(cardset)]))
@@ -196,11 +198,15 @@ class GameHandler:
 			self.game.make_move(move.function, move.args)
 
 			if move.function == 'drawDestinationCards':
+				#generate possible destination card choices manually
+				possible_moves = self.generate_destination_card_choices(cur_player, self.game.destination_deck_draw_rules[3])
+				assert len(possible_moves) > 0, "Dest card generated moves is 0"
+
 				#get move chosen for this player
-				if self.train and i in self.aql_indices:
-					chosen_move, chosen_agent = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_game)
+				if self.train and cur_player in self.aql_indices:
+					chosen_move, chosen_agent = self.agents[cur_player].train_choose_destination_cards(possible_moves, self.game, cur_player, num_keep_game)
 				else:
-					chosen_move = self.agents[i].choose_destination_cards(possible_moves, self.game, i, num_keep_game)
+					chosen_move = self.agents[cur_player].choose_destination_cards(possible_moves, self.game, cur_player, num_keep_game)
 				
 				#execute move in game
 				self.game.choose_destination_cards(cur_player, chosen_move.args[1], num_keep_game)
@@ -224,8 +230,10 @@ class GameHandler:
 						continue
 					elif self.game.players[i].points > highest_opp:
 						highest_opp = self.game.players[i].points	
-				reward = 15 * (self.game.players[aql].points - highest_opp)
-				self.agents[aql].update_final(aql, self.game, reward)
+				
+				move_reward = self.eval_rewards(aql, prev_moves[aql].function, prev_moves[aql].args)
+				eog_reward = 100 * (self.game.players[aql].points - highest_opp)
+				self.agents[aql].update_final(aql, self.game, move_reward + eog_reward)
 
 		#for i in range(0, self.game.number_of_players):
 		#	print("Player " + str(i+1) + ": " + str(self.game.players[i].points))
@@ -333,8 +341,9 @@ class Player:
 		self.graph = nx.Graph()
 		self.drawing_train_cards = False
 		self.completed_destination_cards = set()
+		self.completed_destination_cards_train = set()
 		#Values estimated; roughly 3/4 of each deck would be depleted if each player held that many (assuming no complete destination cards)
-		self.max_incomplete_destination_cards = 6
+		self.max_incomplete_destination_cards = 3
 		self.max_train_car_cards = 20
 
 	def copy(self):
@@ -349,8 +358,9 @@ class Player:
 		for card in self.hand_destination_cards:
 			print(card)
 	
-	def can_draw_destination_cards(self):
-		return len(self.hand_destination_cards) - len(self.completed_destination_cards) < self.max_incomplete_destination_cards
+	def can_draw_destination_cards(self, num_to_draw):
+		#print(len(self.hand_destination_cards), "-", len(self.completed_destination_cards), "+", num_to_draw)
+		return len(self.hand_destination_cards) - len(self.completed_destination_cards) + num_to_draw <= self.max_incomplete_destination_cards
 	
 	def can_draw_train_car_cards(self):
 		return len(self.hand) - len(self.hand["destination"]) < self.max_train_car_cards
@@ -1210,7 +1220,7 @@ class Game:
 								if self.players[player_index].number_of_trains >= edge['weight'] + edge['mountain']:
 									pmoves.append(Move('claimRoute', [city1, city2, color]))
 								#pmoves.append(Move(self.move_claimRoute, [city1, city2, color]))
-			if sum(self.destination_deck.deck.values()) > 0 and self.players[player_index].can_draw_destination_cards():
+			if sum(self.destination_deck.deck.values()) > 0 and self.players[player_index].can_draw_destination_cards(self.destination_deck_draw_rules[3]): #possible to draw destination cards even if only 1 can be drawn
 				pmoves.append(Move('drawDestinationCards',[]))
 				#pmoves.append(Move(self.move_drawDestinationCards,[]))
 			if sum(self.train_deck.deck.values()) > 0 and self.players[player_index].can_draw_train_car_cards():
@@ -1316,6 +1326,18 @@ class Game:
 					num += 1
 			except:
 				pass
+		return num
+	
+	def getNumIncompleteDCards(self, pnum):
+		num = 0
+		player = self.players[pnum]
+		player_graph = self.player_graph(pnum)
+		
+		for destination in player.hand_destination_cards:
+			if destination.destinations[0] not in self.player_graph(pnum) or destination.destinations[1] not in self.player_graph(pnum):
+				num += 1
+			elif not nx.has_path(player_graph, destination.destinations[0], destination.destinations[1]):
+				num += 1
 		return num
 
 	def getUnclaimedRoutes(self):
