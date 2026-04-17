@@ -13,19 +13,26 @@ from approximateQLearningAgent import *
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import pprint
+import ast
 
 board = Board(loadgraphfromfile("gameContent/usa.txt"))
 dest_deck_dict = destinationdeckdict(dest_list=loaddestinationdeckfromfile("gameContent/usa_destinations.txt"), board="usa")
 agent = ApproximateQLearningAgent()
 
+#Load in Q-values
+with open("q_values.txt", 'r') as f:
+    qvals = f.read()
+agent.qvalues = ast.literal_eval(qvals)
+
 train_score_record = []
-epsilon_start = 0.4 #1
+epsilon_start = 0.1 #1
 agent.epsilon = epsilon_start
 
-num_training_sessions = 150 #4000
-epsilon_target = 0.05
-cur_epsilon = epsilon_start
-epsilon_decay = 0.99 #0.998
+num_training_sessions = 15000
+#epsilon_target = 0.1
+#cur_epsilon = epsilon_start
+#epsilon_decay = 0.9995
 #when_reach_target = 0.65 * num_training_sessions
 
 game_no = 0
@@ -57,8 +64,8 @@ while game_no < num_training_sessions:
     else:
         #record points
         train_score_record.append(player_list[0].points)
-        cur_epsilon = max(epsilon_target, cur_epsilon * epsilon_decay)
-        agent.epsilon = cur_epsilon
+        #cur_epsilon = max(epsilon_target, cur_epsilon * epsilon_decay)
+        #agent.epsilon = cur_epsilon
         game_no += 1
 
 #test it out!
@@ -83,12 +90,14 @@ with open('score_log.txt', 'a') as f:
     finally:
         sys.stdout = original_stdout
 
-#record weights somehow
+#record Q-values somehow
+#check number of nonzero Q-values
 with open('score_log.txt', 'a') as f:
     original_stdout = sys.stdout
     try:
         sys.stdout = f
-        print("Agent weights", agent.weights)
+        print("Agent q-values")
+        pprint.pprint(agent.qvalues)
     finally:
         sys.stdout = original_stdout
 
