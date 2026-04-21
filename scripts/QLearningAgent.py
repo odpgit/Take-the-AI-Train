@@ -16,11 +16,8 @@ import random
 
 # Make sure to: train against rotating set of agents
 #           2-player game against each alone equal # of times? 4-player game against 2 of 3 rotating?        
-#
 
-# 
-
-class ApproximateQLearningAgent(Agent):
+class QLearningAgent(Agent):
     #convert list of True/False values to number corresponding to state
     def bool_list_to_number(self, state):
         state_idx = 0
@@ -33,10 +30,13 @@ class ApproximateQLearningAgent(Agent):
         tab = {1:1, 2:2, 3:4, 4:7, 5:10, 6:15, 8:21, 9:27}
         return tab[val]
     
-    def __init__(self):
+    def __init__(self, agents=None):
         #Just need for other init stuff
-        self.agents = [HungryAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent(), PathAgent()]
-
+        if agents is None:
+            self.agents = [HungryAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent(), PathAgent()]
+        else:
+            self.agents = agents
+        
         #Class variables that should NOT change between training runs
 
         self.features = [getattr(self, name) for name in self.__class__.__dict__ 
@@ -60,10 +60,10 @@ class ApproximateQLearningAgent(Agent):
         # self.weight_decay = 0.9999
         # self.weight_decay_final = 0.99
 
-        self.qvalues = {state: {agent.__class__.__name__: 10.0 for agent in self.agents} for state in range(2**len(self.features))}
+        self.qvalues = {state: {agent.__class__.__name__: 0.0 for agent in self.agents} for state in range(2**len(self.features))}
         
         self.discount = 0.995
-        self.alpha = 0.15
+        self.alpha = 0.1
         self.epsilon = 0.1
         self.reinitialize_vars()        
         
@@ -72,7 +72,7 @@ class ApproximateQLearningAgent(Agent):
 
         #List of agents to pick actions from.
         #Each agent will have decide() called on it with this agent's pnum, which should keep their fields updated
-        self.agents = [HungryAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent(), PathAgent()]
+        self.agents = [type(a)() for a in self.agents]
         
         self.jgraph = None
         self.remaining_dest = []

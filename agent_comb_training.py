@@ -1,0 +1,117 @@
+import sys
+sys.path.insert(0, 'scripts/')
+import io
+
+from loadDestinationDeck import *
+from loadMap import *
+from ttrengine import *
+from pathAgent import *
+from hungryAgent import *
+from oneStepThinkerAgent import *
+from longRouteJunkieAgent import *
+from QLearningAgent import *
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+import pprint
+import ast
+
+board = Board(loadgraphfromfile("gameContent/usa.txt"))
+dest_deck_dict = destinationdeckdict(dest_list=loaddestinationdeckfromfile("gameContent/usa_destinations.txt"), board="usa")
+
+all_combs_len_3 = [[HungryAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent()], 
+                   [HungryAgent(), LongRouteJunkieAgent(), PathAgent()],
+                   [HungryAgent(), PathAgent(), OneStepThinkerAgent()],
+                   [PathAgent(), LongRouteJunkieAgent(), OneStepThinkerAgent()]]
+
+all_combs_len_2 = [[HungryAgent(), LongRouteJunkieAgent()],
+                   [HungryAgent(), OneStepThinkerAgent()],
+                   [HungryAgent(), PathAgent()],
+                   [LongRouteJunkieAgent(), OneStepThinkerAgent()],
+                   [LongRouteJunkieAgent(), PathAgent()],
+                   [OneStepThinkerAgent(), PathAgent()]]
+
+best_combs_map = {"HL": [HungryAgent(), LongRouteJunkieAgent()], "LO": [LongRouteJunkieAgent(), OneStepThinkerAgent()]}
+for prefix in best_combs_map:
+    cur_comb = best_combs_map[prefix]
+    comb_names = " ".join([ag.__class__.__name__ for ag in cur_comb])
+    #re-initialize agent and Q-values with this combination
+    agent = QLearningAgent(cur_comb)
+    #From score_log.txt
+    with open(prefix + "_q_values.txt", 'r') as f:
+        qvals = f.read()
+    agent.qvalues = ast.literal_eval(qvals)
+
+    train_score_record = []
+    epsilon_start = 0.5
+    agent.epsilon = epsilon_start
+
+    num_training_sessions = 15000
+    epsilon_target = 0.05
+    epsilon_decay = 0.99975
+    game_no = 0
+    while game_no < num_training_sessions:
+        player_list = [Player(hand=emptyCardDict(), number_of_trains=45, points=0) for i in range(0,4)]
+        game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
+        gh = GameHandler(game=game_object, agents=[agent, HungryAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
+        gh.train = True
+        gh.ql_indices = set()
+        gh.ql_indices.add(0)
+
+        start = time.time()
+        gh.play(runnum=game_no, save=False)
+        print (f"Game no. {game_no}, scored {player_list[0].points}, dcards: {game_object.getNumCompletedDCards(0)} complete and {game_object.getNumIncompleteDCards(0)} incomplete totaling {len(player_list[0].hand_destination_cards)} for {game_object.getDCardScore(0)} points, took {gh.turn_count} turns ({(time.time() - start):.2f} seconds)")
+
+        #rerun this game number if the run was not successful 
+        #record points if the run was successful
+        agent.reinitialize_vars()
+        if gh.run_failure:
+            print(f"Failure detected, redoing run {game_no}")
+        else:
+            #record points
+            train_score_record.append(player_list[0].points)
+            agent.epsilon = max(epsilon_target, epsilon_decay ** game_no)
+            game_no += 1
+
+    #test it out!
+    test_score_record = []
+    player_list = [Player(hand=emptyCardDict(), number_of_trains=45, points=0) for i in range(0,4)]
+    game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
+    gh = GameHandler(game=game_object, agents=[agent, HungryAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
+    gh.train = False
+    gh.ql_indices = set()
+    gh.play(runnum=game_no + 1, save=False)
+
+    #print results
+    print(f"Scoring Breakdown for agent (player 0)")
+    gh.game.print_scoresheet()
+    #log results
+    with open('score_log.txt', 'a') as f:
+        original_stdout = sys.stdout
+        try:
+            sys.stdout = f
+            print(f"Scoring Breakdown for agent (player 0)")
+            gh.game.print_scoresheet()
+        finally:
+            sys.stdout = original_stdout
+
+    #record Q-values somehow
+    #check number of nonzero Q-values
+    with open('score_log.txt', 'a') as f:
+        original_stdout = sys.stdout
+        try:
+            sys.stdout = f
+            print(f"{comb_names} q-values")
+            pprint.pprint(agent.qvalues)
+        finally:
+            sys.stdout = original_stdout
+
+    #score curve
+    train_score_record = [np.array(arr) for arr in train_score_record]
+
+    train_x = np.arange(num_training_sessions)
+
+    plt.clf()
+    plt.plot(train_x, train_score_record)
+    plt.title(f"{comb_names} training score progression")
+    plt.savefig(f"{comb_names} training score progression.png")

@@ -8,7 +8,7 @@ from pathAgent import *
 from hungryAgent import *
 from oneStepThinkerAgent import *
 from longRouteJunkieAgent import *
-from approximateQLearningAgent import *
+from QLearningAgent import *
 import numpy as np
 import matplotlib.pyplot as plt
 import copy
@@ -18,8 +18,8 @@ board = Board(loadgraphfromfile("gameContent/usa.txt"))
 dest_deck_dict = destinationdeckdict(dest_list=loaddestinationdeckfromfile("gameContent/usa_destinations.txt"), board="usa")
 
 #Create agents to compare
-sp_agent = ApproximateQLearningAgent()
-no_sp_agent = ApproximateQLearningAgent()
+sp_agent = QLearningAgent()
+no_sp_agent = QLearningAgent()
 agent_lst = [no_sp_agent] #[sp_agent, no_sp_agent]
 
 #name them for ease of reference
@@ -46,7 +46,7 @@ for (i, ag) in enumerate(agent_lst):
           game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
           gh = GameHandler(game=game_object, agents=[ag, HungryAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
           gh.train = False
-          gh.aql_indices = set([0])
+          gh.ql_indices = set([0])
           gh.play(runnum=game_no * (i+1), save=False)
           if gh.run_failure:
                print(f"Failure detected, redoing run {game_no}")

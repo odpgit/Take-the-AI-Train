@@ -9,7 +9,7 @@ from pathAgent import *
 from hungryAgent import *
 from oneStepThinkerAgent import *
 from longRouteJunkieAgent import *
-from approximateQLearningAgent import *
+from QLearningAgent import *
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -18,21 +18,21 @@ import ast
 
 board = Board(loadgraphfromfile("gameContent/usa.txt"))
 dest_deck_dict = destinationdeckdict(dest_list=loaddestinationdeckfromfile("gameContent/usa_destinations.txt"), board="usa")
-agent = ApproximateQLearningAgent()
+agent = QLearningAgent()
 
 #Load in Q-values
-with open("q_values.txt", 'r') as f:
-    qvals = f.read()
-agent.qvalues = ast.literal_eval(qvals)
+#with open("q_values.txt", 'r') as f:
+    #qvals = f.read()
+#agent.qvalues = ast.literal_eval(qvals)
 
 train_score_record = []
-epsilon_start = 0.1 #1
+epsilon_start = 1
 agent.epsilon = epsilon_start
 
-num_training_sessions = 15000
-#epsilon_target = 0.1
-#cur_epsilon = epsilon_start
-#epsilon_decay = 0.9995
+num_training_sessions = 10000
+epsilon_target = 0.05
+cur_epsilon = epsilon_start
+epsilon_decay = 0.99965
 #when_reach_target = 0.65 * num_training_sessions
 
 game_no = 0
@@ -49,8 +49,8 @@ while game_no < num_training_sessions:
     game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
     gh = GameHandler(game=game_object, agents=[agent, HungryAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
     gh.train = True
-    gh.aql_indices = set()
-    gh.aql_indices.add(0)
+    gh.ql_indices = set()
+    gh.ql_indices.add(0)
 
     start = time.time()
     gh.play(runnum=game_no, save=False)
@@ -64,8 +64,8 @@ while game_no < num_training_sessions:
     else:
         #record points
         train_score_record.append(player_list[0].points)
-        #cur_epsilon = max(epsilon_target, cur_epsilon * epsilon_decay)
-        #agent.epsilon = cur_epsilon
+        cur_epsilon = max(epsilon_target, epsilon_decay ** game_no)
+        agent.epsilon = cur_epsilon
         game_no += 1
 
 #test it out!
@@ -74,7 +74,7 @@ player_list = [Player(hand=emptyCardDict(), number_of_trains=45, points=0) for i
 game_object = Game(board=board.copy(), point_table=point_table(), destination_deck=dest_deck_dict.copy(), train_deck=make_train_deck(number_of_color_cards=12, number_of_wildcards=14), players=player_list, current_player=0, variants=[3, 2, 3, 1, True, False, False, False, False, False, 4, 5, 2, 3, 2, 10, 15, 2, False])
 gh = GameHandler(game=game_object, agents=[agent, HungryAgent(), OneStepThinkerAgent(), LongRouteJunkieAgent()], filename="test")
 gh.train = False
-gh.aql_indices = set()
+gh.ql_indices = set()
 gh.play(runnum=game_no + 1, save=False)
 
 #print results

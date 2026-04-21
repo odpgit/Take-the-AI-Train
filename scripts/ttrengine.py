@@ -47,13 +47,14 @@ class GameHandler:
 		self.first_player = -1
 		self.total_relative_edges_left = []
 		self.train = True # NOTE: set this to False when not training!!
-		self.aql_indices = set([0]) # NOTE: set this accordingly!
+		self.ql_indices = set([0]) # NOTE: set this accordingly!
 		self.run_failure = False
 		self.agents_reporting = dict()
 		self.path_lookup = dict()
-		self.agent_best_paths = {i: None for i in self.aql_indices}
+		self.agent_best_paths = {i: None for i in self.ql_indices}
 	
 	def eval_rewards(self, pnum, move, args):
+		return 0
 		if move == 'chooseDestinationCards':
 			return -0.05 * (45 - min([p.number_of_trains for p in self.game.players]))
 			#reward = 0
@@ -153,15 +154,15 @@ class GameHandler:
 		for i in range(self.game.number_of_players):
 			possible_moves = self.generate_destination_card_choices(i, num_keep_start)
 			
-			if self.train and i in self.aql_indices:
+			if self.train and i in self.ql_indices:
 				chosen_move, orig_idx, chosen_agent_name = self.agents[i].train_choose_destination_cards(possible_moves, self.game, i, num_keep_start)
-			elif self.agents[i].__class__.__name__ == "ApproximateQLearningAgent":
+			elif self.agents[i].__class__.__name__ == "QLearningAgent":
 				chosen_move, _, _ = self.agents[i].choose_destination_cards(possible_moves, self.game, i, num_keep_start)
 			else:
 				chosen_move = self.agents[i].choose_destination_cards(possible_moves, self.game, i, num_keep_start)
 			
 			self.game.choose_destination_cards(i, chosen_move.args[1], num_keep_start)
-			if self.train and i in self.aql_indices:
+			if self.train and i in self.ql_indices:
 				reward = self.eval_rewards(i, chosen_move.function, chosen_move.args)
 				self.agents[i].update(i, orig_idx, chosen_agent_name, self.game, reward)
 		
@@ -172,7 +173,7 @@ class GameHandler:
 			prev_game_indices = {}
 			prev_moves = {}
 			prev_agents = {}
-			for idx in self.aql_indices:
+			for idx in self.ql_indices:
 				prev_game_indices[idx] = None
 				prev_moves[idx] = None
 				prev_agents[idx] = None
@@ -192,7 +193,7 @@ class GameHandler:
 					self.total_relative_edges_left.append(numberOfRelativeEdges(self.game.board.graph))
 			
 			cur_player = self.game.current_player
-			if self.train and cur_player in self.aql_indices:
+			if self.train and cur_player in self.ql_indices:
 				#Evaluate rewards from previous move taken, if this isn't the first move
 				if prev_game_indices[cur_player] is not None:
 					#eval_rewards uses current game state, which is right
@@ -211,7 +212,7 @@ class GameHandler:
 				if self.agents[cur_player].run_failure:
 					self.run_failure = True
 					return
-			elif self.agents[cur_player].__class__.__name__ == "ApproximateQLearningAgent":
+			elif self.agents[cur_player].__class__.__name__ == "QLearningAgent":
 				move, _, _ = self.agents[cur_player].decide(self.game, cur_player)
 			else:	
 				move = self.agents[cur_player].decide(self.game, cur_player)
@@ -220,7 +221,7 @@ class GameHandler:
 				self.run_failure = True
 				return
 
-			if cur_player in self.aql_indices:
+			if cur_player in self.ql_indices:
 				for ag in self.agents[cur_player].best_agents_reporting:
 					if ag in self.agents_reporting:
 						self.agents_reporting[ag] += 1
@@ -239,7 +240,7 @@ class GameHandler:
 			self.game.make_move(move.function, move.args)
 
 			if move.function == 'claimRoute' and self.train:
-				for i in self.aql_indices:
+				for i in self.ql_indices:
 					for dcard in self.game.players[i].hand_destination_cards:
 						if frozenset((move.args[0], move.args[1])) in self.agent_best_paths[i][tuple(dcard.destinations)]:
 							self.recalculate_shortest_path(i, dcard)
@@ -249,9 +250,9 @@ class GameHandler:
 				assert len(possible_moves) > 0, "Dest card generated moves is 0"
 
 				#get move chosen for this player
-				if self.train and cur_player in self.aql_indices:
+				if self.train and cur_player in self.ql_indices:
 					chosen_move, orig_idx, chosen_agent_name = self.agents[cur_player].train_choose_destination_cards(possible_moves, self.game, cur_player, num_keep_game)
-				elif self.agents[cur_player].__class__.__name__ == "ApproximateQLearningAgent":
+				elif self.agents[cur_player].__class__.__name__ == "QLearningAgent":
 					chosen_move, _, _ = self.agents[cur_player].choose_destination_cards(possible_moves, self.game, cur_player, num_keep_game)
 				else:
 					chosen_move = self.agents[cur_player].choose_destination_cards(possible_moves, self.game, cur_player, num_keep_game)
@@ -259,7 +260,7 @@ class GameHandler:
 				#execute move in game
 				self.game.choose_destination_cards(cur_player, chosen_move.args[1], num_keep_game)
 				
-				if self.train and cur_player in self.aql_indices:
+				if self.train and cur_player in self.ql_indices:
 					#Override prev variables, since it was previously set for drawDestinationCards move
 					prev_moves[cur_player] = chosen_move.copy()
 					prev_game_indices[cur_player] = orig_idx
@@ -274,7 +275,7 @@ class GameHandler:
 				self.turn_count += 1
 
 		if self.train:
-			for aql in self.aql_indices:
+			for aql in self.ql_indices:
 				#find highest opponent
 				highest_opp = -float('inf')
 				for i in range(len(self.game.players)):
@@ -283,9 +284,10 @@ class GameHandler:
 					elif self.game.players[i].points > highest_opp:
 						highest_opp = self.game.players[i].points	
 				
-				move_reward = self.eval_rewards(aql, prev_moves[aql].function, prev_moves[aql].args)
-				eog_reward = 2 * (self.game.players[aql].points - highest_opp)
-				self.agents[aql].update(aql, prev_game_indices[aql], prev_agents[aql], self.game, move_reward + eog_reward)
+				#move_reward = self.eval_rewards(aql, prev_moves[aql].function, prev_moves[aql].args)
+				#eog_reward = 2 * (self.game.players[aql].points - highest_opp)
+				mapping = {1: 1, 2: 1/3, 3: -1/3, 4: -1}
+				self.agents[aql].update(aql, prev_game_indices[aql], prev_agents[aql], self.game, mapping[self.game.get_place(aql)])
 
 		#for i in range(0, self.game.number_of_players):
 		#	print("Player " + str(i+1) + ": " + str(self.game.players[i].points))
