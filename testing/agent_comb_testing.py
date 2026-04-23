@@ -1,5 +1,7 @@
-import sys
-sys.path.insert(0, 'scripts/')
+import sys, os
+project_root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root_dir)
+sys.path.insert(0, os.path.join(project_root_dir, 'scripts'))
 
 from loadDestinationDeck import *
 from loadMap import *
@@ -11,7 +13,6 @@ from longRouteJunkieAgent import *
 from QLearningAgent import *
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
 import ast
 
 board = Board(loadgraphfromfile("gameContent/usa.txt"))

@@ -1,6 +1,7 @@
-import sys
-sys.path.insert(0, 'scripts/')
-import io
+import sys, os
+project_root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root_dir)
+sys.path.insert(0, os.path.join(project_root_dir, 'scripts'))
 
 from loadDestinationDeck import *
 from loadMap import *
